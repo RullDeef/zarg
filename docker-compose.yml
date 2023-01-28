@@ -1,0 +1,10 @@
+version: '3.0'
+
+services:
+  zarg-bot:
+    image: golang:alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: go run ./cmd/bot/main.go
+    env_file: .env
