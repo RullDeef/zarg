@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -10,7 +9,6 @@ import (
 	"zarg/lib/model"
 
 	"github.com/SevereCloud/vksdk/v2/api"
-	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/events"
 	"github.com/SevereCloud/vksdk/v2/longpoll-bot"
 )
@@ -41,63 +39,31 @@ func main() {
 }
 
 func makeLongpollHandler(vk *api.VK) func(context.Context, events.MessageNewObject) {
-	sessionActive := false
-	var chat chan model.Replica
-	var out chan string
+	interactors := make(map[int]*controllers.VKInteractor)
+	sessions := make(map[int]*model.Session)
 
 	return func(_ context.Context, obj events.MessageNewObject) {
-		log.Print(obj.Message.Text)
-		if strings.ToLower(obj.Message.Text) == "в поход" {
-			if sessionActive {
-				sendMessage(vk, obj.Message.PeerID, "Нельзя начать еще один поход!")
-			} else {
-				sessionActive = true
-				chat = make(chan model.Replica)
-				out = make(chan string)
+		chatID := obj.Message.PeerID
+		msg := obj.Message.Text
+		log.Printf("%d: %s\n", chatID, msg)
 
-				go messageSender(vk, obj.Message.PeerID, out)
-				go func() {
-					controllers.BeginSession(chat, out)
-					sessionActive = false
-				}()
-			}
-		} else if sessionActive {
-			userName := getUserName(vk, obj.Message.FromID)
-			chat <- model.NewReplica(obj.Message.FromID, userName, obj.Message.Text)
-		}
-	}
-}
-
-func messageSender(vk *api.VK, peerID int, in chan string) {
-	for {
-		msg, ok := <-in
+		// check for interactor for this chat
+		interactor, ok := interactors[chatID]
 		if !ok {
-			break
+			interactor = controllers.NewVKInteractor(vk, chatID)
+			interactors[chatID] = interactor
 		}
 
-		sendMessage(vk, peerID, msg)
+		if strings.ToLower(strings.TrimSpace(msg)) == "в поход" {
+			if sessions[chatID] != nil {
+				interactor.Printf("Нельзя начать еще один поход!")
+			} else {
+				sessions[chatID] = model.NewSession(interactor, func() {
+					sessions[chatID] = nil
+				})
+			}
+		} else {
+			interactor.SendMessage(obj)
+		}
 	}
-}
-
-func sendMessage(vk *api.VK, peerID int, message string) {
-	b := params.NewMessagesSendBuilder()
-	b.PeerID(peerID)
-	b.Message(message)
-	b.RandomID(0)
-
-	_, err := vk.MessagesSend(b.Params)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func getUserName(vk *api.VK, userID int) string {
-	users, err := vk.UsersGet(map[string]interface{}{
-		"user_ids": []int{userID},
-		"fields":   []string{},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return fmt.Sprintf("%s %s", users[0].FirstName, users[0].LastName)
 }
