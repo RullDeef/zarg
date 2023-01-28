@@ -1,10 +1,11 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
-	"time"
+	"sync"
 	"zarg/lib/model"
 	"zarg/lib/pubsub"
 
@@ -17,6 +18,7 @@ type VKInteractor struct {
 	vk      *api.VK
 	pub     *pubsub.Publisher
 	groupID int
+	lock    sync.Mutex
 }
 
 func NewVKInteractor(vk *api.VK, groupID int) *VKInteractor {
@@ -24,14 +26,19 @@ func NewVKInteractor(vk *api.VK, groupID int) *VKInteractor {
 		vk:      vk,
 		pub:     pubsub.NewPublisher(),
 		groupID: groupID,
+		lock:    sync.Mutex{},
 	}
 }
 
 func (i *VKInteractor) Close() {
+	log.Printf("VKInteractor #%p closed", i)
 	i.pub.Close()
 }
 
 func (i *VKInteractor) Printf(format string, a ...any) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
 	b := params.NewMessagesSendBuilder()
 	b.PeerID(i.groupID)
 	b.Message(fmt.Sprintf(format, a...))
@@ -44,6 +51,9 @@ func (i *VKInteractor) Printf(format string, a ...any) {
 }
 
 func (i *VKInteractor) GetUserName(userID int) string {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
 	b := params.NewUsersGetBuilder()
 	b.UserIDs([]string{strconv.Itoa(userID)})
 
@@ -60,25 +70,16 @@ func (i *VKInteractor) SendMessage(m events.MessageNewObject) {
 	i.pub.Publish(model.NewUserMessage(userID, msg))
 }
 
-func (i *VKInteractor) ReceiveFor(d time.Duration) chan model.UserMessage {
-	m := make(chan model.UserMessage)
+func (i *VKInteractor) Receive(ctx context.Context, f func(model.UserMessage)) error {
+	s := pubsub.NewSubscriber(i.pub)
+	defer s.Unsubscribe()
 
-	go func() {
-		s := pubsub.NewSubscriber(i.pub)
-		defer s.Unsubscribe()
-		defer close(m)
-
-		delay := time.After(d)
-	outer:
-		for {
-			select {
-			case msg := <-s.Receive():
-				m <- msg.(model.UserMessage)
-			case <-delay:
-				break outer
-			}
+	for {
+		select {
+		case msg := <-s.Receive():
+			f(msg.(model.UserMessage))
+		case <-ctx.Done():
+			return ctx.Err()
 		}
-	}()
-
-	return m
+	}
 }

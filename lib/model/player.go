@@ -3,6 +3,8 @@ package model
 import (
 	"container/list"
 	"fmt"
+	"log"
+	"strings"
 )
 
 const maxPlayerHealth = 100
@@ -75,6 +77,47 @@ func (pl *PlayerList) Foreach(f func(int, *Player)) {
 	for node, i := pl.list.Front(), 0; node != nil; node, i = node.Next(), i+1 {
 		f(i, node.Value.(*Player))
 	}
+}
+
+func (pl *PlayerList) SetOrdering(ids []int) {
+	if len(ids) != pl.Len() {
+		log.Fatalf("len(players list) = %d, but len(ordering) = %d\n", pl.Len(), len(ids))
+	}
+
+	newList := list.New()
+	for _, id := range ids {
+		p := pl.GetByID(id)
+		if p == nil {
+			log.Fatalf("ordering: %+v is invalid for players list: %+v\n", ids, pl)
+		}
+		newList.PushBack(p)
+	}
+	pl.list = newList
+}
+
+func (pl *PlayerList) OrderingString() string {
+	ordering := make([]string, pl.Len())
+	pl.Foreach(func(i int, p *Player) {
+		ordering[i] = p.Name()
+	})
+	return strings.Join(ordering, " -> ")
+}
+
+func (pl *PlayerList) PhantomOrderingString(ids []int) string {
+	ordering := ""
+	for _, id := range ids {
+		p := pl.GetByID(id)
+		ordering += p.Name() + " -> "
+	}
+	return ordering + "..."
+}
+
+func (pl *PlayerList) ListString() string {
+	res := ""
+	for i, node := 1, pl.list.Front(); node != nil; i, node = i+1, node.Next() {
+		res += fmt.Sprintf("  %d. %s\n", i, node.Value.(*Player).Name())
+	}
+	return res
 }
 
 func (pl *PlayerList) StatsInfo() string {
