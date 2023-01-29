@@ -10,31 +10,26 @@ import (
 const maxPlayerHealth = 100
 
 type Player struct {
-	userID int
-	name   string
+	user   *User
 	Health int
 	Weapon *Weapon
 }
 
 type PlayerList struct {
 	list *list.List
+	iter *list.Element
 }
 
-func NewPlayer(userID int, name string) *Player {
+func NewPlayer(user *User) *Player {
 	return &Player{
-		userID: userID,
-		name:   name,
+		user:   user,
 		Health: maxPlayerHealth,
 		Weapon: nil,
 	}
 }
 
-func (p *Player) UserID() int {
-	return p.userID
-}
-
-func (p *Player) Name() string {
-	return p.name
+func (p *Player) User() *User {
+	return p.user
 }
 
 func NewPlayerList() *PlayerList {
@@ -51,13 +46,35 @@ func (pl *PlayerList) Len() int {
 	return pl.list.Len()
 }
 
+func (pl *PlayerList) LenAlive() int {
+	res := 0
+
+	for i, node := 1, pl.list.Front(); node != nil; i, node = i+1, node.Next() {
+		p := node.Value.(*Player)
+		if p.Health > 0 {
+			res += 1
+		}
+	}
+
+	return res
+}
+
 func (pl *PlayerList) Add(p *Player) {
 	pl.list.PushBack(p)
 }
 
 func (pl *PlayerList) GetByID(userID int) *Player {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		if node.Value.(*Player).userID == userID {
+		if node.Value.(*Player).user.ID == userID {
+			return node.Value.(*Player)
+		}
+	}
+	return nil
+}
+
+func (pl *PlayerList) GetByUser(u *User) *Player {
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		if node.Value.(*Player).user == u {
 			return node.Value.(*Player)
 		}
 	}
@@ -66,7 +83,7 @@ func (pl *PlayerList) GetByID(userID int) *Player {
 
 func (pl *PlayerList) RemoveByID(userID int) *Player {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		if node.Value.(*Player).userID == userID {
+		if node.Value.(*Player).user.ID == userID {
 			return pl.list.Remove(node).(*Player)
 		}
 	}
@@ -79,16 +96,16 @@ func (pl *PlayerList) Foreach(f func(int, *Player)) {
 	}
 }
 
-func (pl *PlayerList) SetOrdering(ids []int) {
-	if len(ids) != pl.Len() {
-		log.Fatalf("len(players list) = %d, but len(ordering) = %d\n", pl.Len(), len(ids))
+func (pl *PlayerList) SetOrdering(users []*User) {
+	if len(users) != pl.Len() {
+		log.Fatalf("len(players list) = %d, but len(ordering) = %d\n", pl.Len(), len(users))
 	}
 
 	newList := list.New()
-	for _, id := range ids {
-		p := pl.GetByID(id)
+	for _, u := range users {
+		p := pl.GetByUser(u)
 		if p == nil {
-			log.Fatalf("ordering: %+v is invalid for players list: %+v\n", ids, pl)
+			log.Fatalf("ordering: %+v is invalid for players list: %+v\n", users, pl)
 		}
 		newList.PushBack(p)
 	}
@@ -98,16 +115,15 @@ func (pl *PlayerList) SetOrdering(ids []int) {
 func (pl *PlayerList) OrderingString() string {
 	ordering := make([]string, pl.Len())
 	pl.Foreach(func(i int, p *Player) {
-		ordering[i] = p.Name()
+		ordering[i] = p.user.FullName()
 	})
 	return strings.Join(ordering, " -> ")
 }
 
-func (pl *PlayerList) PhantomOrderingString(ids []int) string {
+func (pl *PlayerList) PhantomOrderingString(users []*User) string {
 	ordering := ""
-	for _, id := range ids {
-		p := pl.GetByID(id)
-		ordering += p.Name() + " -> "
+	for _, u := range users {
+		ordering += u.FullName() + " -> "
 	}
 	return ordering + "..."
 }
@@ -115,7 +131,7 @@ func (pl *PlayerList) PhantomOrderingString(ids []int) string {
 func (pl *PlayerList) ListString() string {
 	res := ""
 	for i, node := 1, pl.list.Front(); node != nil; i, node = i+1, node.Next() {
-		res += fmt.Sprintf("  %d. %s\n", i, node.Value.(*Player).Name())
+		res += fmt.Sprintf("  %d. %s\n", i, node.Value.(*Player).user.FullName())
 	}
 	return res
 }
@@ -125,8 +141,36 @@ func (pl *PlayerList) StatsInfo() string {
 
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(*Player)
-		inf += fmt.Sprintf("%s: %s\nHP: %d\n\n", p.Name(), p.Weapon.SummaryShort(), p.Health)
+		inf += fmt.Sprintf("%s: %s\nHP: %d\n\n", p.user.FullName(), p.Weapon.SummaryShort(), p.Health)
 	}
 
 	return inf
+}
+
+func (pl *PlayerList) EndFight() {
+	pl.iter = nil
+}
+
+func (pl *PlayerList) ChooseNext() *Player {
+	if pl.LenAlive() == 0 {
+		log.Fatal("all players dead!")
+	}
+
+	if pl.iter == nil {
+		pl.iter = pl.list.Front()
+	} else {
+		pl.iter = pl.iter.Next()
+		if pl.iter == nil {
+			pl.iter = pl.list.Front()
+		}
+	}
+
+	for pl.iter.Value.(*Player).Health == 0 {
+		pl.iter = pl.iter.Next()
+		if pl.iter == nil {
+			pl.iter = pl.list.Front()
+		}
+	}
+
+	return pl.iter.Value.(*Player)
 }

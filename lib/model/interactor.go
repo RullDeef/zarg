@@ -5,14 +5,12 @@ import (
 )
 
 type UserMessage struct {
-	UserID  int
+	User    *User
 	Message string
 }
 
 type Interactor interface {
 	Printf(fmt string, args ...any)
-
-	GetUserName(userID int) string
 
 	// gets a message from chat. Close channel on timeout
 	Receive(ctx context.Context, f func(UserMessage)) error
@@ -21,9 +19,9 @@ type Interactor interface {
 	// SetTimeoutAction(d time.Duration, action func())
 }
 
-func NewUserMessage(userID int, msg string) UserMessage {
+func NewUserMessage(user *User, msg string) UserMessage {
 	return UserMessage{
-		UserID:  userID,
+		User:    user,
 		Message: msg,
 	}
 }

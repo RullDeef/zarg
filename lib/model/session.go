@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -73,16 +74,16 @@ func (s *Session) gatherPlayers(ctx context.Context) bool {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	s.interactor.Receive(ctx, func(umsg UserMessage) {
 		if strings.ToLower(strings.TrimSpace(umsg.Message)) == "я" {
-			if p := s.players.GetByID(umsg.UserID); p != nil {
-				s.interactor.Printf("%s уже в списке!", p.Name())
+			if p := s.players.GetByID(umsg.User.ID); p != nil {
+				s.interactor.Printf("%s уже в списке!", p.user.FullName())
 			} else {
-				userName := s.interactor.GetUserName(umsg.UserID)
-				s.players.Add(NewPlayer(umsg.UserID, userName))
+				userName := umsg.User.FullName()
+				s.players.Add(NewPlayer(umsg.User))
 				s.interactor.Printf("%s участвует в походе!", userName)
 			}
 		} else if strings.ToLower(strings.TrimSpace(umsg.Message)) == "не я" {
-			if p := s.players.RemoveByID(umsg.UserID); p != nil {
-				s.interactor.Printf("%s вычеркнут(-а) из списка.", p.Name())
+			if p := s.players.RemoveByID(umsg.User.ID); p != nil {
+				s.interactor.Printf("%s вычеркнут(-а) из списка.", p.user.FullName())
 			}
 		}
 	})
@@ -127,7 +128,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 		}
 
 		// find player that chooses
-		if p := s.players.GetByID(umsg.UserID); p != nil {
+		if p := s.players.GetByID(umsg.User.ID); p != nil {
 			hadNoWeapon := !weaponShowcase.HasMadePick(p)
 			ok, w, other := weaponShowcase.TryPick(p, opt-1)
 
@@ -135,9 +136,9 @@ func (s *Session) pickWeapons(ctx context.Context) {
 				if hadNoWeapon {
 					nChosen += 1
 				}
-				s.interactor.Printf("%s выбирает %s.", p.Name(), w.SummaryShort())
+				s.interactor.Printf("%s выбирает %s.", p.user.FullName(), w.SummaryShort())
 			} else {
-				s.interactor.Printf("%s уже выбрал %s!", w.SummaryShort(), other.Name())
+				s.interactor.Printf("%s уже выбрал %s!", w.SummaryShort(), other.user.FullName())
 			}
 		}
 
@@ -164,7 +165,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 	s.interactor.Printf("Определите очередность ходов для пошагового режима. Первый игрок должен написать \"я\", остальные - \"потом я\".")
 
-	var order []int
+	var order []*User
 
 	alarm := time.AfterFunc(time.Duration(45*time.Second), func() {
 		s.interactor.Printf("Если не поторопитесь, игра завершится так и не начавшись!")
@@ -172,23 +173,23 @@ func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	err := s.interactor.Receive(ctx, func(umsg UserMessage) {
-		if s.players.GetByID(umsg.UserID) == nil {
+		if s.players.GetByID(umsg.User.ID) == nil {
 			return // skip non-players messages
 		}
 
 		msg := strings.ToLower(strings.TrimSpace(umsg.Message))
 		if msg == "я" {
-			order = append(([]int)(nil), umsg.UserID)
+			order = append(([]*User)(nil), umsg.User)
 		} else if msg == "потом я" {
 			// remove id from list
-			for i, id := range order {
-				if id == umsg.UserID {
+			for i, u := range order {
+				if u == umsg.User {
 					order = append(order[:i], order[i+1:]...)
 					break
 				}
 			}
 
-			order = append(order, umsg.UserID)
+			order = append(order, umsg.User)
 		} else {
 			return
 		}
@@ -245,6 +246,50 @@ func (s *Session) explore(ctx context.Context, fm *FloorMaze) {
 
 func (s *Session) exploreEnemiesRoom(ctx context.Context, fm *FloorMaze) {
 	s.interactor.Printf("Вы не одни... На вас напали!")
+
+	enemySquad := NewEnemySquad(1+rand.Intn(2), func() *Enemy {
+		tier := fm.tierMin + rand.Intn(fm.tierMax-fm.tierMin+1)
+		return RandomEnemy(tier, 9, 2)
+	})
+
+	s.interactor.Printf(enemySquad.Info())
+
+	for enemySquad.LenAlive() > 0 && s.players.LenAlive() > 0 {
+		// make turn generator
+		turnGen := utils.NewPropMap()
+
+		turnGen.Add("players", s.players.LenAlive())
+		turnGen.Add("enemies", enemySquad.LenAlive())
+
+		switch turnGen.Choose().(string) {
+		case "players":
+			p := s.players.ChooseNext()
+			s.makePlayerAction(ctx, p, enemySquad)
+		case "enemies":
+			e := enemySquad.ChooseNext()
+			s.makeEnemyAction(ctx, e, enemySquad)
+		default:
+			log.Fatal("must never happen!")
+		}
+	}
+}
+
+func (s *Session) makePlayerAction(ctx context.Context, p *Player, es *EnemySquad) {
+	if s.makePauseFor(ctx, time.Second) != nil {
+		return
+	}
+
+	s.interactor.Printf("Ходит %s.", p.User().FullName())
+}
+
+func (s *Session) makeEnemyAction(ctx context.Context, e *Enemy, es *EnemySquad) {
+	if s.makePauseFor(ctx, time.Second) != nil {
+		return
+	}
+
+	s.interactor.Printf("Ходит %s.", e.Name)
+
+	// choose random player and attack him
 }
 
 func (s *Session) exploreTreasureRoom(ctx context.Context, fm *FloorMaze) {
