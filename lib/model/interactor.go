@@ -12,7 +12,7 @@ type UserMessage struct {
 type Interactor interface {
 	Printf(fmt string, args ...any)
 
-	// gets a message from chat. Close channel on timeout
+	// gets a messages from chat.
 	Receive(ctx context.Context, f func(UserMessage)) error
 
 	// perform action on timeout when nobody response to game

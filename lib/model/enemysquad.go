@@ -24,12 +24,31 @@ func NewEnemySquad(n int, builder func() *Enemy) *EnemySquad {
 	}
 }
 
-func (es *EnemySquad) Info() string {
+func (es *EnemySquad) Foreach(f func(int, *Enemy)) {
+	for i, node := 0, es.list.Front(); node != nil; i, node = i+1, node.Next() {
+		f(i, node.Value.(*Enemy))
+	}
+}
+
+func (es *EnemySquad) ForeachAlive(f func(int, *Enemy)) {
+	for i, node := 0, es.list.Front(); node != nil; i, node = i+1, node.Next() {
+		e := node.Value.(*Enemy)
+		if e.Health > 0 {
+			f(i, e)
+		}
+	}
+}
+
+func (es *EnemySquad) CompactInfo() string {
 	res := ""
 
 	for i, node := 1, es.list.Front(); node != nil; i, node = i+1, node.Next() {
 		e := node.Value.(*Enemy)
-		res += fmt.Sprintf("%d) %s (HP:%d, Атака:%d)\n", i, e.Name, e.Health, e.Attack)
+		if e.Health == 0 {
+			res += fmt.Sprintf("%d) %s (мертв)\n", i, e.Name)
+		} else {
+			res += fmt.Sprintf("%d) %s (HP:%d, Атака:%d)\n", i, e.Name, e.Health, e.Attack)
+		}
 	}
 
 	return res

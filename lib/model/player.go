@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"log"
+	"math/rand"
 	"strings"
 )
 
@@ -30,6 +31,13 @@ func NewPlayer(user *User) *Player {
 
 func (p *Player) User() *User {
 	return p.user
+}
+
+func (p *Player) MakeDamage(val int) {
+	p.Health -= val
+	if p.Health < 0 {
+		p.Health = 0
+	}
 }
 
 func NewPlayerList() *PlayerList {
@@ -136,14 +144,29 @@ func (pl *PlayerList) ListString() string {
 	return res
 }
 
-func (pl *PlayerList) StatsInfo() string {
-	inf := "Статы игроков:\n\n"
-
+func (pl *PlayerList) Info() string {
+	inf := ""
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(*Player)
-		inf += fmt.Sprintf("%s: %s\nHP: %d\n\n", p.user.FullName(), p.Weapon.SummaryShort(), p.Health)
+		if p.Health == 0 {
+			inf += fmt.Sprintf("%s: мертв\n", p.user.FullName())
+		} else {
+			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.user.FullName(), p.Health, p.Weapon.SummaryShort())
+		}
 	}
+	return inf
+}
 
+func (pl *PlayerList) CompactInfo() string {
+	inf := ""
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		p := node.Value.(*Player)
+		if p.Health == 0 {
+			inf += fmt.Sprintf("%s: мертв\n", p.user.FullName())
+		} else {
+			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.user.FullName(), p.Health, p.Weapon.SummaryShort())
+		}
+	}
 	return inf
 }
 
@@ -173,4 +196,21 @@ func (pl *PlayerList) ChooseNext() *Player {
 	}
 
 	return pl.iter.Value.(*Player)
+}
+
+func (pl *PlayerList) ChooseRandomAlive() *Player {
+	n := rand.Intn(pl.LenAlive())
+
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		p := node.Value.(*Player)
+		if p.Health > 0 {
+			if n == 0 {
+				return p
+			}
+			n -= 1
+		}
+	}
+
+	log.Panic("everyone dead, nothing to choose from!")
+	return nil
 }

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"log"
 	"sync"
 )
 
@@ -33,7 +32,6 @@ func NewSubscriber(p *Publisher) *Subscriber {
 	}
 
 	p.subs = append(p.subs, s)
-	log.Printf("sub #%p subscribed", s)
 	return s
 }
 
@@ -70,6 +68,4 @@ func (s *Subscriber) Unsubscribe() {
 		s.pub.subs = s.pub.subs[:len(s.pub.subs)-1]
 		s.pub.subs[s.id].id = s.id
 	}
-
-	log.Printf("sub #%p unsubscribed", s)
 }
