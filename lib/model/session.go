@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"zarg/lib/utils"
 )
 
 type Session struct {
@@ -30,7 +31,10 @@ func NewSession(i Interactor, onDone func()) *Session {
 }
 
 func (s *Session) Stop() {
-	s.shutdown()
+	if s.cancelFunc != nil {
+		s.cancelFunc()
+		s.cancelFunc = nil
+	}
 }
 
 func (s *Session) startup(ctx context.Context) {
@@ -44,6 +48,10 @@ func (s *Session) startup(ctx context.Context) {
 	if s.players.Len() > 1 && !s.determinePlayersOrder(ctx) {
 		return
 	}
+
+	// generate first floor maze
+	floorMaze := NewFloorMaze("Подземелье", 1, 3)
+	s.explore(ctx, floorMaze)
 }
 
 func (s *Session) shutdown() {
@@ -204,4 +212,62 @@ func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 
 	s.interactor.Printf("Что ж, если вы не можете определиться с очередностью, командной работы точно не будет. Поход отменён.")
 	return false
+}
+
+func (s *Session) explore(ctx context.Context, fm *FloorMaze) {
+	if ctx.Err() != nil {
+		return
+	}
+
+	roomProbGen := utils.NewPropMap()
+	roomProbGen.Add("enemy", 4)
+	roomProbGen.Add("treasure", 3)
+	roomProbGen.Add("trap", 2)
+	roomProbGen.Add("rest", 2)
+
+	for i := 0; i < fm.roomsCount; i++ {
+		if s.makePauseFor(ctx, 3*time.Second) != nil {
+			return
+		}
+
+		switch roomProbGen.Choose().(string) {
+		case "enemy":
+			s.exploreEnemiesRoom(ctx, fm)
+		case "treasure":
+			s.exploreTreasureRoom(ctx, fm)
+		case "trap":
+			s.exploreTrapRoom(ctx, fm)
+		case "rest":
+			s.exploreRestRoom(ctx, fm)
+		}
+	}
+}
+
+func (s *Session) exploreEnemiesRoom(ctx context.Context, fm *FloorMaze) {
+	s.interactor.Printf("Вы не одни... На вас напали!")
+}
+
+func (s *Session) exploreTreasureRoom(ctx context.Context, fm *FloorMaze) {
+	s.interactor.Printf("Вы находите комнату с сокровищами.")
+}
+
+func (s *Session) exploreTrapRoom(ctx context.Context, fm *FloorMaze) {
+	s.interactor.Printf("Что-то подсказывает вам, что тут не все так безобидно, как кажется на первый взгляд.")
+}
+
+func (s *Session) exploreRestRoom(ctx context.Context, fm *FloorMaze) {
+	s.interactor.Printf("Вы находите комнату, в которой можно перевести дух и обговорить дальнейшие планы.")
+}
+
+func (s *Session) makePauseFor(ctx context.Context, d time.Duration) error {
+	if ctx.Err() == nil {
+		select {
+		case <-time.After(d):
+			break
+		case <-ctx.Done():
+			break
+		}
+	}
+
+	return ctx.Err()
 }

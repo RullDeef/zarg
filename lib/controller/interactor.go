@@ -1,13 +1,14 @@
-package controllers
+package controller
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"zarg/lib/model"
-	"zarg/lib/pubsub"
+	"zarg/lib/utils"
 
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
@@ -15,18 +16,20 @@ import (
 )
 
 type VKInteractor struct {
-	vk      *api.VK
-	pub     *pubsub.Publisher
-	groupID int
-	lock    sync.Mutex
+	vk        *api.VK
+	pub       *utils.Publisher
+	groupID   int
+	lock      sync.Mutex
+	fakeUsers map[int]string
 }
 
 func NewVKInteractor(vk *api.VK, groupID int) *VKInteractor {
 	return &VKInteractor{
-		vk:      vk,
-		pub:     pubsub.NewPublisher(),
-		groupID: groupID,
-		lock:    sync.Mutex{},
+		vk:        vk,
+		pub:       utils.NewPublisher(),
+		groupID:   groupID,
+		lock:      sync.Mutex{},
+		fakeUsers: map[int]string{},
 	}
 }
 
@@ -54,6 +57,11 @@ func (i *VKInteractor) GetUserName(userID int) string {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	// check fake users first
+	if name := i.fakeUsers[userID]; name != "" {
+		return name
+	}
+
 	b := params.NewUsersGetBuilder()
 	b.UserIDs([]string{strconv.Itoa(userID)})
 
@@ -67,11 +75,39 @@ func (i *VKInteractor) GetUserName(userID int) string {
 func (i *VKInteractor) SendMessage(m events.MessageNewObject) {
 	userID := m.Message.FromID
 	msg := m.Message.Text
+
+	// check message is fake
+	terms := strings.Split(msg, " ")
+	if len(terms) > 0 && terms[len(terms)-1][0] == ':' {
+		name := terms[len(terms)-1][1:]
+		msg = strings.Join(terms[:len(terms)-1], " ")
+		log.Printf("fake message detected from \"%s\": \"%s\"", name, msg)
+		i.sendFakeMessage(name, msg)
+	} else {
+		i.pub.Publish(model.NewUserMessage(userID, msg))
+	}
+}
+
+func (i *VKInteractor) sendFakeMessage(userName string, msg string) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	userID := 1
+	for id, name := range i.fakeUsers {
+		if name == userName {
+			userID = id
+			break
+		}
+		if userID < id+1 {
+			userID = id + 1
+		}
+	}
+	i.fakeUsers[userID] = userName
 	i.pub.Publish(model.NewUserMessage(userID, msg))
 }
 
 func (i *VKInteractor) Receive(ctx context.Context, f func(model.UserMessage)) error {
-	s := pubsub.NewSubscriber(i.pub)
+	s := utils.NewSubscriber(i.pub)
 	defer s.Unsubscribe()
 
 	for {
