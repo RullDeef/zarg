@@ -61,17 +61,21 @@ func makeLongpollHandler(vk *api.VK) func(context.Context, events.MessageNewObje
 			return controller.NewVKInteractor(vk, chatID)
 		}).(*controller.VKInteractor)
 
-		if strings.ToLower(strings.TrimSpace(msg)) == "в поход" {
+		cmd := strings.ToLower(strings.TrimSpace(msg))
+
+		if cmd == "в поход" {
 			if !sessionBroker.AddSession(chatID, func() {
 				log.Printf("session for chatID=%d ended", chatID)
 			}) {
 				i.Printf("Нельзя начать еще один поход!")
 			}
-		} else if strings.ToLower(strings.TrimSpace(msg)) == "/стоп" {
+		} else if cmd == "/стоп" {
 			if s := sessionBroker.Session(chatID); s != nil {
 				s.Stop()
 				log.Print("session canceled")
 			}
+		} else if cmd == "/пинг" {
+			i.Printf("понг")
 		} else {
 			i.SendMessage(obj)
 		}
