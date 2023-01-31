@@ -1,6 +1,7 @@
 package armor
 
 import (
+	"fmt"
 	"math/rand"
 	I "zarg/lib/model/interfaces"
 )
@@ -38,6 +39,10 @@ func Random() *ArmorItem {
 // Pickable interface implementation
 func (a ArmorItem) Name() string {
 	return a.name
+}
+
+func (a ArmorItem) Description() string {
+	return fmt.Sprintf("Защита - %d", a.defence)
 }
 
 // Pickable interface implementation

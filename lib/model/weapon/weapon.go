@@ -42,7 +42,7 @@ func FistsWeapon(attackMean, attackDiff int) *Weapon {
 	}
 }
 
-func RandomWeapon(tier int, attackMean, attackDiff int) *Weapon {
+func RandomWeapon(attackMean, attackDiff int) *Weapon {
 	kind := WeaponKind(rand.Int() % len(weaponKinds))
 	name := weaponNames[kind][rand.Int()%len(weaponNames[kind])]
 
@@ -54,10 +54,10 @@ func RandomWeapon(tier int, attackMean, attackDiff int) *Weapon {
 	}
 }
 
-func RandomWeapons(n int, tier int, attackMean, attackDiff int) []*Weapon {
+func RandomWeapons(n int, attackMean, attackDiff int) []*Weapon {
 	var w []*Weapon
 	for i := 0; i < n; i++ {
-		w = append(w, RandomWeapon(tier, attackMean, attackDiff))
+		w = append(w, RandomWeapon(attackMean, attackDiff))
 	}
 	return w
 }

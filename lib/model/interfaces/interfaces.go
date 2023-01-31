@@ -100,3 +100,7 @@ type WeaponShowcase interface {
 
 	ConfirmPick()
 }
+
+type BaseSession interface {
+	Printf(fmt string, args ...any)
+}

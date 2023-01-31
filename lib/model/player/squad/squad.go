@@ -117,9 +117,19 @@ func (pl *PlayerSquad) Info() string {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
-			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.FullName(), p.Health(), p.Weapon().Description())
+			inf += fmt.Sprintf("%s: HP=%d\n", p.FullName(), p.Health())
+			inf += fmt.Sprintf("%s. %s.\n", p.Weapon().Title(), p.Weapon().Description())
+			var items []string
+			p.ForEachItem(func(p I.Pickable) {
+				items = append(items, p.Name())
+			})
+			if len(items) > 0 {
+				inf += fmt.Sprintf("%s.\n\n", strings.Join(items, ", "))
+			} else {
+				inf += "\n"
+			}
 		} else {
-			inf += fmt.Sprintf("%s: мертв\n", p.FullName())
+			inf += fmt.Sprintf("%s: мертв\n\n", p.FullName())
 		}
 	}
 	return inf
@@ -130,7 +140,7 @@ func (pl *PlayerSquad) CompactInfo() string {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
-			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.FullName(), p.Health(), p.Weapon().Title())
+			inf += fmt.Sprintf("%s: HP=%d\n", p.FullName(), p.Health())
 		} else {
 			inf += fmt.Sprintf("%s: мертв\n", p.FullName())
 		}

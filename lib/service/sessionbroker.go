@@ -4,19 +4,20 @@ import (
 	"log"
 	"sync"
 	"zarg/lib/model"
+	"zarg/lib/model/session"
 )
 
 // service for managing interactors and sessions
 type SessionBroker struct {
 	interactors map[int]model.Interactor
-	sessions    map[int]*model.Session
+	sessions    map[int]*session.Session
 	lock        sync.RWMutex
 }
 
 func NewSessionBroker() *SessionBroker {
 	return &SessionBroker{
 		interactors: map[int]model.Interactor{},
-		sessions:    map[int]*model.Session{},
+		sessions:    map[int]*session.Session{},
 		lock:        sync.RWMutex{},
 	}
 }
@@ -46,7 +47,7 @@ func (sb *SessionBroker) AddSession(chatID int, cleanup func()) bool {
 		log.Fatalf("failed to create session: interactor for chatID=%d is not set!", chatID)
 	}
 
-	sb.sessions[chatID] = model.NewSession(i, func() {
+	sb.sessions[chatID] = session.NewSession(i, func() {
 		defer cleanup()
 		sb.lock.Lock()
 		defer sb.lock.Unlock()
@@ -58,7 +59,7 @@ func (sb *SessionBroker) AddSession(chatID int, cleanup func()) bool {
 	return true
 }
 
-func (sb *SessionBroker) Session(chatID int) *model.Session {
+func (sb *SessionBroker) Session(chatID int) *session.Session {
 	sb.lock.Lock()
 	defer sb.lock.Unlock()
 
