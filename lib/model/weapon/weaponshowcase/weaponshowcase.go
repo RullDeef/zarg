@@ -1,20 +1,22 @@
-package model
+package weaponshowcase
 
 import (
 	"fmt"
 	"sync"
+	"zarg/lib/model/player"
+	"zarg/lib/model/weapon"
 )
 
 // starting weapons that players may choose from
 type WeaponShowcase struct {
-	weapons  []*Weapon
-	pickedBy []*Player
+	weapons  []*weapon.Weapon
+	pickedBy []*player.Player
 	lock     sync.Mutex
 }
 
-func NewWeaponShowcase(n int, maker func() *Weapon) *WeaponShowcase {
-	weapons := make([]*Weapon, n)
-	pickedBy := make([]*Player, n)
+func NewWeaponShowcase(n int, maker func() *weapon.Weapon) *WeaponShowcase {
+	weapons := make([]*weapon.Weapon, n)
+	pickedBy := make([]*player.Player, n)
 
 	for i := 0; i < n; i++ {
 		weapons[i] = maker()
@@ -27,7 +29,7 @@ func NewWeaponShowcase(n int, maker func() *Weapon) *WeaponShowcase {
 	}
 }
 
-func (ws *WeaponShowcase) Weapons() []*Weapon {
+func (ws *WeaponShowcase) Weapons() []*weapon.Weapon {
 	return ws.weapons
 }
 
@@ -50,7 +52,7 @@ func (ws *WeaponShowcase) ConfirmPick() {
 	}
 }
 
-func (ws *WeaponShowcase) HasMadePick(player *Player) bool {
+func (ws *WeaponShowcase) HasMadePick(player *player.Player) bool {
 	for _, p := range ws.pickedBy {
 		if p == player {
 			return true
@@ -59,7 +61,7 @@ func (ws *WeaponShowcase) HasMadePick(player *Player) bool {
 	return false
 }
 
-func (ws *WeaponShowcase) TryPick(p *Player, i int) (bool, *Weapon, *Player) {
+func (ws *WeaponShowcase) TryPick(p *player.Player, i int) (bool, *weapon.Weapon, *player.Player) {
 	ws.lock.Lock()
 	defer ws.lock.Unlock()
 
@@ -77,7 +79,7 @@ func (ws *WeaponShowcase) TryPick(p *Player, i int) (bool, *Weapon, *Player) {
 	return false, w, ws.pickedBy[i]
 }
 
-func (ws *WeaponShowcase) unpick(player *Player) {
+func (ws *WeaponShowcase) unpick(player *player.Player) {
 	for i, p := range ws.pickedBy {
 		if p == player {
 			ws.pickedBy[i] = nil

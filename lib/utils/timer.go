@@ -11,12 +11,37 @@ type Timer struct {
 	pauser   *Pauser
 }
 
+type Timeouter struct {
+	Timer
+	canceled bool
+}
+
 func NewTimer(d time.Duration, pauser *Pauser) *Timer {
 	return &Timer{
 		at:       time.Now(),
 		duration: d,
 		pauser:   pauser,
 	}
+}
+
+func AfterFunc(ctx context.Context, d time.Duration, pauser *Pauser, action func()) *Timeouter {
+	t := &Timeouter{
+		Timer: Timer{
+			at:       time.Now(),
+			duration: d,
+			pauser:   pauser,
+		},
+		canceled: false,
+	}
+
+	go func(ctx context.Context) {
+		<-t.WaitCompleted(ctx)
+		if !t.canceled {
+			action()
+		}
+	}(ctx)
+
+	return t
 }
 
 func (t *Timer) WaitCompleted(ctx context.Context) chan struct{} {
@@ -38,4 +63,8 @@ func (t *Timer) WaitCompleted(ctx context.Context) chan struct{} {
 	}()
 
 	return c
+}
+
+func (t *Timeouter) Stop() {
+	t.canceled = true
 }

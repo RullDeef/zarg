@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
+	"zarg/lib/model/user"
 )
 
 type UserMessage struct {
-	User    *User
+	User    *user.User
 	Message string
 }
 
@@ -19,7 +20,7 @@ type Interactor interface {
 	// SetTimeoutAction(d time.Duration, action func())
 }
 
-func NewUserMessage(user *User, msg string) UserMessage {
+func NewUserMessage(user *user.User, msg string) UserMessage {
 	return UserMessage{
 		User:    user,
 		Message: msg,

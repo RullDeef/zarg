@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"zarg/lib/model"
+	"zarg/lib/model/user"
 	"zarg/lib/utils"
 
 	"github.com/SevereCloud/vksdk/v2/api"
@@ -20,8 +21,8 @@ type VKInteractor struct {
 	vk        *api.VK
 	pub       *utils.Publisher
 	groupID   int
-	chatUsers map[int]*model.User
-	fakeUsers map[string]*model.User
+	chatUsers map[int]*user.User
+	fakeUsers map[string]*user.User
 	lock      sync.Mutex
 }
 
@@ -30,8 +31,8 @@ func NewVKInteractor(vk *api.VK, groupID int) *VKInteractor {
 		vk:        vk,
 		pub:       utils.NewPublisher(),
 		groupID:   groupID,
-		chatUsers: map[int]*model.User{},
-		fakeUsers: map[string]*model.User{},
+		chatUsers: map[int]*user.User{},
+		fakeUsers: map[string]*user.User{},
 		lock:      sync.Mutex{},
 	}
 }
@@ -45,14 +46,17 @@ func (i *VKInteractor) Printf(format string, a ...any) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	msg := fmt.Sprintf(format, a...)
 	b := params.NewMessagesSendBuilder()
 	b.PeerID(i.groupID)
-	b.Message(fmt.Sprintf(format, a...))
+	b.Message(msg)
 	b.RandomID(0)
 
 	_, err := i.vk.MessagesSend(b.Params)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
+	} else {
+		log.Printf("VKInteractor sent: \"%s\"", msg)
 	}
 }
 
@@ -61,7 +65,7 @@ func (i *VKInteractor) SendMessage(m events.MessageNewObject) {
 	msg := m.Message.Text
 
 	// check message is fake
-	re := regexp.MustCompile(`^([^:]+?)\s+:\s+([^:]+?)$`)
+	re := regexp.MustCompile(`^([^:]+?)\s*:\s*([^:]+?)$`)
 	if match := re.FindStringSubmatch(msg); match != nil {
 		msg, name := match[1], match[2]
 		log.Printf("fake message detected from \"%s\": \"%s\"", name, msg)
@@ -100,7 +104,7 @@ func (i *VKInteractor) Receive(ctx context.Context, f func(model.UserMessage)) e
 	}
 }
 
-func (i *VKInteractor) lockedGetChatUser(id int) *model.User {
+func (i *VKInteractor) lockedGetChatUser(id int) *user.User {
 	if u := i.chatUsers[id]; u != nil {
 		return u
 	}
@@ -114,18 +118,18 @@ func (i *VKInteractor) lockedGetChatUser(id int) *model.User {
 		log.Fatal(err)
 	}
 
-	u := model.NewUser(id, users[0].FirstName, users[0].LastName)
+	u := user.New(id, users[0].FirstName, users[0].LastName)
 	i.chatUsers[id] = u
 	return u
 }
 
-func (i *VKInteractor) lockedGetFakeUser(name string) *model.User {
+func (i *VKInteractor) lockedGetFakeUser(name string) *user.User {
 	if u := i.fakeUsers[name]; u != nil {
 		return u
 	}
 
 	// create new fake user
-	u := model.NewUser(rand.Int(), name, "")
+	u := user.New(rand.Int(), name, "")
 	i.fakeUsers[name] = u
 	return u
 }

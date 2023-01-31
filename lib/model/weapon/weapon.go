@@ -1,4 +1,4 @@
-package model
+package weapon
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package model
+package user
 
 import "fmt"
 
@@ -8,7 +8,7 @@ type User struct {
 	LastName  string
 }
 
-func NewUser(id int, firstName, lastName string) *User {
+func New(id int, firstName, lastName string) *User {
 	return &User{
 		ID:        id,
 		FirstName: firstName,
