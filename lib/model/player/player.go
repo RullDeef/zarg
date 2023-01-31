@@ -1,22 +1,26 @@
 package player
 
 import (
-	i "zarg/lib/model/interfaces"
+	"log"
+	"math/rand"
+	I "zarg/lib/model/interfaces"
 )
 
 const maxHealth = 100
 
 type Player struct {
-	user   i.User
+	user   I.User
 	health int
-	weapon i.Weapon
+	weapon I.Weapon
+	items  []I.Pickable
 }
 
-func NewPlayer(user i.User) *Player {
+func NewPlayer(user I.User) *Player {
 	return &Player{
 		user:   user,
 		health: maxHealth,
 		weapon: nil,
+		items:  nil,
 	}
 }
 
@@ -59,11 +63,21 @@ func (p *Player) Heal(value int) {
 }
 
 // Entity interface implementation
-func (p *Player) Damage(value int) {
-	p.health -= value
+func (p *Player) Damage(dmg I.DamageStats) int {
+	for _, it := range p.items {
+		dmg = it.ModifyOngoingDamage(dmg)
+	}
+
+	val := dmg.Base
+	if rand.Float32() < dmg.CritChance {
+		val = dmg.Crit
+	}
+
+	p.health -= val
 	if p.health < 0 {
 		p.health = 0
 	}
+	return val
 }
 
 // Entity interface implementation
@@ -72,11 +86,44 @@ func (p Player) Alive() bool {
 }
 
 // Player interface implementation
-func (p Player) Weapon() i.Weapon {
+func (p Player) Weapon() I.Weapon {
 	return p.weapon
 }
 
 // Player interface implementation
-func (p *Player) PickWeapon(w i.Weapon) {
+func (p *Player) PickWeapon(w I.Weapon) {
 	p.weapon = w
+	w.SetOwner(p)
+}
+
+// Player interface implementation
+func (p *Player) Attack() I.DamageStats {
+	dmg := p.weapon.Attack()
+	for _, it := range p.items {
+		dmg = it.ModifyOutgoingDamage(dmg)
+	}
+	return dmg
+}
+
+// Player interface implementation
+func (p *Player) PickItem(item I.Pickable) {
+	p.items = append(p.items, item)
+}
+
+// Player interface implementation
+func (p *Player) DropItem(item I.Pickable) {
+	for i, it := range p.items {
+		if it == item {
+			p.items = append(p.items[:i], p.items[i+1:]...)
+			return
+		}
+	}
+	log.Panicf("no such item (%+v) with player (%+v)", item, p)
+}
+
+// Player interface implementation
+func (p *Player) ForEachItem(f func(I.Pickable)) {
+	for _, item := range p.items {
+		f(item)
+	}
 }

@@ -17,18 +17,26 @@ const (
 type Trap struct {
 	description string
 	damageType  DamageType
-	attack      int
+	attack      I.DamageStats
 }
 
 func New(desc string, damageType DamageType, attack int) *Trap {
-	return &Trap{
+	t := &Trap{
 		description: desc,
 		damageType:  damageType,
-		attack:      attack,
+		attack: I.DamageStats{
+			Base:       attack,
+			Crit:       attack,
+			CritChance: 0.0,
+		},
 	}
+
+	t.attack.Producer = t
+	return t
 }
 
-func (t *Trap) Description() string {
+// DamageProducer interface implementation
+func (t *Trap) Name() string {
 	return t.description
 }
 

@@ -46,7 +46,8 @@ func (es *EnemySquad) CompactInfo() string {
 	for i, node := 1, es.list.Front(); node != nil; i, node = i+1, node.Next() {
 		e := node.Value.(I.Enemy)
 		if e.Alive() {
-			res += fmt.Sprintf("%d) %s (HP:%d, Атака:%d)\n", i, e.Name(), e.Health(), e.AttackPower())
+			atk := e.Attack()
+			res += fmt.Sprintf("%d) %s (HP:%d, Атака:%d(%d))\n", i, e.Name(), e.Health(), atk.Base, atk.Crit)
 		} else {
 			res += fmt.Sprintf("%d) %s (мертв)\n", i, e.Name())
 		}

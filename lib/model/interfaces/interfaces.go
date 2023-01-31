@@ -12,7 +12,8 @@ type Entity interface {
 
 	Health() int
 	Heal(value int)
-	Damage(value int)
+	// returns actual damage taken
+	Damage(DamageStats) int
 	Alive() bool
 }
 
@@ -22,6 +23,12 @@ type Player interface {
 
 	Weapon() Weapon
 	PickWeapon(Weapon)
+
+	Attack() DamageStats
+
+	PickItem(Pickable)
+	DropItem(Pickable)
+	ForEachItem(func(Pickable))
 }
 
 type PlayerList interface {
@@ -36,14 +43,29 @@ type Weapon interface {
 	Title() string
 	Description() string
 
-	Attack() int
+	SetOwner(Player)
+	Attack() DamageStats
+}
+
+type DamageEmitor interface {
+	Name() string
+}
+
+type DamageStats struct {
+	Producer   DamageEmitor
+	Base       int
+	Crit       int
+	CritChance float32
 }
 
 type Pickable interface {
 	Name() string
 
-	PickUp(Player)
 	Owner() Player
+	SetOwner(Player)
+
+	ModifyOngoingDamage(DamageStats) DamageStats
+	ModifyOutgoingDamage(DamageStats) DamageStats
 }
 
 type Usable interface {
@@ -63,8 +85,7 @@ type Consumable interface {
 type Enemy interface {
 	Entity
 
-	AttackPower() int
-	Attack()
+	Attack() DamageStats
 }
 
 type WeaponShowcase interface {

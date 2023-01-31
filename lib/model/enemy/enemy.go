@@ -1,37 +1,35 @@
 package enemy
 
-import "math/rand"
+import (
+	"math/rand"
+	I "zarg/lib/model/interfaces"
+)
 
 var enemyNames = []string{
 	"Гигантская крыса", "Выползень", "Грызяк",
 }
 
 type Enemy struct {
-	name        string
-	health      int
-	maxHealth   int
-	attackPower int
-	onAttack    func(*Enemy)
+	name      string
+	health    int
+	maxHealth int
+	attack    func() I.DamageStats
 }
 
-func New(name string, health int, attackPower int, attack func(*Enemy)) *Enemy {
+func New(name string, health int, attack func() I.DamageStats) *Enemy {
 	return &Enemy{
 		name:      name,
 		health:    health,
 		maxHealth: health,
-		onAttack:  attack,
+		attack:    attack,
 	}
 }
 
-func Random(attackMean int, attackDiff int, attack func(*Enemy)) *Enemy {
+func Random(attack func() I.DamageStats) *Enemy {
 	name := enemyNames[rand.Intn(len(enemyNames))]
 	health := 20
 
-	attackMin := attackMean - attackDiff
-	attackMax := attackMean + attackDiff
-	attackPower := attackMin + rand.Intn(attackMax-attackMin+1)
-
-	return New(name, health, attackPower, attack)
+	return New(name, health, attack)
 }
 
 // Entity interface implementation
@@ -53,11 +51,16 @@ func (e *Enemy) Heal(value int) {
 }
 
 // Entity interface implementation
-func (e *Enemy) Damage(value int) {
-	e.health -= value
+func (e *Enemy) Damage(dmg I.DamageStats) int {
+	val := dmg.Base
+	if rand.Float32() < dmg.CritChance {
+		val = dmg.Crit
+	}
+	e.health -= val
 	if e.health < 0 {
 		e.health = 0
 	}
+	return val
 }
 
 // Entity interface implementation
@@ -66,10 +69,8 @@ func (e *Enemy) Alive() bool {
 }
 
 // Enemy interface implementation
-func (e *Enemy) Attack() {
-	e.onAttack(e)
-}
-
-func (e *Enemy) AttackPower() int {
-	return e.attackPower
+func (e *Enemy) Attack() I.DamageStats {
+	dmg := e.attack()
+	dmg.Producer = e
+	return dmg
 }

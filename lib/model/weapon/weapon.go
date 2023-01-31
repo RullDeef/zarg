@@ -2,7 +2,9 @@ package weapon
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
+	I "zarg/lib/model/interfaces"
 )
 
 type WeaponKind int
@@ -11,17 +13,10 @@ type Weapon struct {
 	name   string
 	attack int
 	Kind   WeaponKind
-	Tier   int
+	owner  I.Player
 }
 
 var (
-	tierStrings = []string{
-		"I",
-		"II",
-		"III",
-		"IV",
-		"V",
-	}
 	weaponKinds = []string{
 		"режущее",
 		"колющее",
@@ -43,7 +38,7 @@ func FistsWeapon(attackMean, attackDiff int) *Weapon {
 		name:   "Кулаки",
 		attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
 		Kind:   4,
-		Tier:   -1,
+		owner:  nil,
 	}
 }
 
@@ -55,7 +50,7 @@ func RandomWeapon(tier int, attackMean, attackDiff int) *Weapon {
 		name:   name,
 		attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
 		Kind:   kind,
-		Tier:   tier,
+		owner:  nil,
 	}
 }
 
@@ -74,14 +69,24 @@ func (w Weapon) Description() string {
 
 // Weapon interface implementation
 func (w Weapon) Title() string {
-	name := w.name
-	if w.Tier >= 0 {
-		name += " " + tierStrings[w.Tier]
-	}
-	return name
+	return w.name
 }
 
 // Weapon interface implementation
-func (w Weapon) Attack() int {
-	return w.attack
+func (w *Weapon) SetOwner(p I.Player) {
+	w.owner = p
+}
+
+// Weapon interface implementation
+func (w Weapon) Attack() I.DamageStats {
+	if w.owner == nil {
+		log.Panicf("owner for weapon %+v is not set!", w)
+	}
+
+	return I.DamageStats{
+		Producer:   w.owner,
+		Base:       w.attack,
+		Crit:       w.attack + 10,
+		CritChance: 0.07,
+	}
 }

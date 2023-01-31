@@ -56,14 +56,24 @@ func (s *Session) startup(ctx context.Context) {
 	defer cancel()
 
 	go s.commandProcessor(ctx)
-
 	if !s.gatherPlayers(ctx) {
 		return
 	}
 
 	s.pickWeapons(ctx)
+	if ctx.Err() != nil {
+		return
+	}
+
 	if s.players.Len() > 1 && !s.determinePlayersOrder(ctx) {
+		if ctx.Err() != nil {
+			return
+		}
 		s.interactor.Printf("Что ж, если вы не можете определиться с очередностью, командной работы точно не будет. Поход отменён.")
+		return
+	}
+
+	if ctx.Err() != nil {
 		return
 	}
 
@@ -218,10 +228,10 @@ func (s *Session) explore(ctx context.Context, fm *FloorMaze) {
 	}
 
 	roomProbGen := utils.NewPropMap()
-	// roomProbGen.Add("enemy", 4)
+	roomProbGen.Add("enemy", 4)
 	roomProbGen.Add("treasure", 3)
-	// roomProbGen.Add("trap", 2)
-	// roomProbGen.Add("rest", 2)
+	roomProbGen.Add("trap", 2)
+	roomProbGen.Add("rest", 2)
 
 	//for i := 0; i < fm.roomsCount; i++ {
 	for {
@@ -250,21 +260,17 @@ func (s *Session) exploreEnemiesRoom(ctx context.Context, fm *FloorMaze) {
 	s.interactor.Printf("Вы не одни... На вас напали!")
 
 	enemySquad := enemySquad.New(2+rand.Intn(2), func() I.Enemy {
-		return enemy.Random(11, 3, func(e *enemy.Enemy) {
-			p := s.players.ChooseRandomAlive()
-			healthBefore := p.Health()
-			p.Damage(e.AttackPower())
+		attackMin := 8
+		attackMax := 14
+		attack := attackMin + rand.Intn(attackMax-attackMin+1)
+		crit := attack + 10
+		critChance := 0.05 + 0.05*rand.Float32()
 
-			if p.Alive() {
-				s.interactor.Printf("%s атакует %s. (HP:%d->%d)", e.Name, p.FullName(), healthBefore, p.Health)
-				if s.makePauseFor(ctx, time.Second) != nil {
-					return
-				}
-			} else {
-				s.interactor.Printf("%s атакует %s. %s убит!", e.Name, p.FullName(), p.FullName())
-				if s.makePauseFor(ctx, 5*time.Second) != nil {
-					return
-				}
+		return enemy.Random(func() I.DamageStats {
+			return I.DamageStats{
+				Base:       attack,
+				Crit:       crit,
+				CritChance: critChance,
 			}
 		})
 	})
@@ -317,18 +323,13 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	opts := map[int]func(){}
 	i := 1
 	es.ForEachAlive(func(e I.Enemy) {
-		h1, h2 := e.Health(), e.Health()-p.Weapon().Attack()
-		if h2 > 0 {
-			optsInfo += fmt.Sprintf("%d) Атаковать %s (HP: %d->%d)\n", i, e.Name(), h1, h2)
-			opts[i] = func() {
-				s.interactor.Printf("%s атакует %s", p.FullName(), e.Name())
-				e.Damage(p.Weapon().Attack())
-			}
-		} else {
-			optsInfo += fmt.Sprintf("%d) Убить %s\n", i, e.Name())
-			opts[i] = func() {
+		optsInfo += fmt.Sprintf("%d) Атаковать %s (HP: %d)\n", i, e.Name(), e.Health())
+		opts[i] = func() {
+			dmg := e.Damage(p.Weapon().Attack())
+			if e.Alive() {
+				s.interactor.Printf("%s атакует %s и наносит %d урона.", p.FullName(), e.Name(), dmg)
+			} else {
 				s.interactor.Printf("%s убивает %s", p.FullName(), e.Name())
-				e.Damage(p.Weapon().Attack())
 			}
 		}
 		i += 1
@@ -351,12 +352,25 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 }
 
 func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad.EnemySquad) {
-	s.interactor.Printf("Ходит %s.", e.Name)
+	s.interactor.Printf("Ходит %s.", e.Name())
 	if s.makePauseFor(ctx, 3*time.Second) != nil {
 		return
 	}
 
-	e.Attack()
+	p := s.players.ChooseRandomAlive()
+	dmg := p.Damage(e.Attack())
+
+	if p.Alive() {
+		s.interactor.Printf("%s атакует %s и наносит %d урона. (HP:%d)", e.Name(), p.FullName(), dmg, p.Health())
+		if s.makePauseFor(ctx, time.Second) != nil {
+			return
+		}
+	} else {
+		s.interactor.Printf("%s убивает %s!", e.Name(), p.FullName())
+		if s.makePauseFor(ctx, 5*time.Second) != nil {
+			return
+		}
+	}
 }
 
 func (s *Session) exploreTreasureRoom(ctx context.Context, fm *FloorMaze) {
@@ -381,7 +395,7 @@ func (s *Session) exploreTrapRoom(ctx context.Context, fm *FloorMaze) {
 	probMap.Add(trap.New("Пол проваливается, и кто-то оказывается в лаве!", trap.DamageRandom, 999), 1)
 
 	t := probMap.Choose().(*trap.Trap)
-	s.interactor.Printf(t.Description())
+	s.interactor.Printf(t.Name())
 
 	if s.makePauseFor(ctx, 2*time.Second) != nil {
 		return
