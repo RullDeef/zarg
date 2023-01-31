@@ -1,4 +1,4 @@
-package player
+package squad
 
 import (
 	"container/list"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"strings"
-	"zarg/lib/model/user"
+	I "zarg/lib/model/interfaces"
 )
 
 type PlayerSquad struct {
@@ -20,20 +20,18 @@ func NewPlayerSquad() *PlayerSquad {
 	}
 }
 
-func (pl *PlayerSquad) Empty() bool {
-	return pl.list.Len() == 0
-}
-
-func (pl *PlayerSquad) Len() int {
+// PlayerList interface implementation
+func (pl PlayerSquad) Len() int {
 	return pl.list.Len()
 }
 
-func (pl *PlayerSquad) LenAlive() int {
+// PlayerList interface implementation
+func (pl PlayerSquad) LenAlive() int {
 	res := 0
 
 	for i, node := 1, pl.list.Front(); node != nil; i, node = i+1, node.Next() {
-		p := node.Value.(*Player)
-		if p.Health > 0 {
+		p := node.Value.(I.Player)
+		if p.Alive() {
 			res += 1
 		}
 	}
@@ -41,61 +39,55 @@ func (pl *PlayerSquad) LenAlive() int {
 	return res
 }
 
-func (pl *PlayerSquad) Add(p *Player) {
+// PlayerList interface implementation
+func (pl *PlayerSquad) ForEach(f func(I.Player)) {
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		f(node.Value.(I.Player))
+	}
+}
+
+// PlayerList interface implementation
+func (pl *PlayerSquad) ForEachAlive(f func(I.Player)) {
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		p := node.Value.(I.Player)
+		if p.Alive() {
+			f(p)
+		}
+	}
+}
+
+func (pl *PlayerSquad) Add(p I.Player) {
 	pl.list.PushBack(p)
 }
 
-func (pl *PlayerSquad) GetByID(userID int) *Player {
+func (pl *PlayerSquad) GetByID(userID int) I.Player {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		if node.Value.(*Player).user.ID == userID {
-			return node.Value.(*Player)
+		p := node.Value.(I.Player)
+		if p.ID() == userID {
+			return p
 		}
 	}
 	return nil
 }
 
-func (pl *PlayerSquad) GetByUser(u *user.User) *Player {
+func (pl *PlayerSquad) RemoveByID(userID int) I.Player {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		if node.Value.(*Player).user == u {
-			return node.Value.(*Player)
+		p := node.Value.(I.Player)
+		if p.ID() == userID {
+			return pl.list.Remove(node).(I.Player)
 		}
 	}
 	return nil
 }
 
-func (pl *PlayerSquad) RemoveByID(userID int) *Player {
-	for node := pl.list.Front(); node != nil; node = node.Next() {
-		if node.Value.(*Player).user.ID == userID {
-			return pl.list.Remove(node).(*Player)
-		}
-	}
-	return nil
-}
-
-func (pl *PlayerSquad) Foreach(f func(int, *Player)) {
-	for node, i := pl.list.Front(), 0; node != nil; node, i = node.Next(), i+1 {
-		f(i, node.Value.(*Player))
-	}
-}
-
-func (pl *PlayerSquad) ForeachAlive(f func(int, *Player)) {
-	for node, i := pl.list.Front(), 0; node != nil; node = node.Next() {
-		p := node.Value.(*Player)
-		if p.Alive() {
-			f(i, p)
-			i += 1
-		}
-	}
-}
-
-func (pl *PlayerSquad) SetOrdering(order []*user.User) {
+func (pl *PlayerSquad) SetOrdering(order []int) {
 	if len(order) != pl.Len() {
 		log.Panicf("len(players list) = %d, but len(ordering) = %d\n", pl.Len(), len(order))
 	}
 
 	newList := list.New()
-	for _, u := range order {
-		p := pl.GetByUser(u)
+	for _, id := range order {
+		p := pl.GetByID(id)
 		if p == nil {
 			log.Panicf("ordering: %+v is invalid for players list: %+v\n", order, pl)
 		}
@@ -105,9 +97,9 @@ func (pl *PlayerSquad) SetOrdering(order []*user.User) {
 }
 
 func (pl *PlayerSquad) OrderingString() string {
-	ordering := make([]string, pl.LenAlive())
-	pl.ForeachAlive(func(i int, p *Player) {
-		ordering[i] = p.user.FullName()
+	ordering := make([]string, 0, pl.LenAlive())
+	pl.ForEachAlive(func(p I.Player) {
+		ordering = append(ordering, p.FullName())
 	})
 	return strings.Join(ordering, " -> ")
 }
@@ -115,7 +107,7 @@ func (pl *PlayerSquad) OrderingString() string {
 func (pl *PlayerSquad) ListString() string {
 	res := ""
 	for i, node := 1, pl.list.Front(); node != nil; i, node = i+1, node.Next() {
-		res += fmt.Sprintf("  %d. %s\n", i, node.Value.(*Player).user.FullName())
+		res += fmt.Sprintf("  %d. %s\n", i, node.Value.(I.Player).FullName())
 	}
 	return res
 }
@@ -123,11 +115,11 @@ func (pl *PlayerSquad) ListString() string {
 func (pl *PlayerSquad) Info() string {
 	inf := ""
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		p := node.Value.(*Player)
-		if p.Health == 0 {
-			inf += fmt.Sprintf("%s: мертв\n", p.user.FullName())
+		p := node.Value.(I.Player)
+		if p.Alive() {
+			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.FullName(), p.Health(), p.Weapon().Description())
 		} else {
-			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.user.FullName(), p.Health, p.Weapon.SummaryShort())
+			inf += fmt.Sprintf("%s: мертв\n", p.FullName())
 		}
 	}
 	return inf
@@ -136,11 +128,11 @@ func (pl *PlayerSquad) Info() string {
 func (pl *PlayerSquad) CompactInfo() string {
 	inf := ""
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		p := node.Value.(*Player)
-		if p.Health == 0 {
-			inf += fmt.Sprintf("%s: мертв\n", p.user.FullName())
+		p := node.Value.(I.Player)
+		if p.Alive() {
+			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.FullName(), p.Health(), p.Weapon().Title())
 		} else {
-			inf += fmt.Sprintf("%s: HP=%d, %s\n", p.user.FullName(), p.Health, p.Weapon.SummaryShort())
+			inf += fmt.Sprintf("%s: мертв\n", p.FullName())
 		}
 	}
 	return inf
@@ -150,9 +142,9 @@ func (pl *PlayerSquad) EndFight() {
 	pl.iter = nil
 }
 
-func (pl *PlayerSquad) ChooseNext() *Player {
+func (pl *PlayerSquad) ChooseNext() I.Player {
 	if pl.LenAlive() == 0 {
-		log.Fatal("all players dead!")
+		log.Panic("all players dead!")
 	}
 
 	if pl.iter == nil {
@@ -164,19 +156,19 @@ func (pl *PlayerSquad) ChooseNext() *Player {
 		}
 	}
 
-	for pl.iter.Value.(*Player).Health == 0 {
+	for !pl.iter.Value.(I.Player).Alive() {
 		pl.iter = pl.iter.Next()
 		if pl.iter == nil {
 			pl.iter = pl.list.Front()
 		}
 	}
 
-	return pl.iter.Value.(*Player)
+	return pl.iter.Value.(I.Player)
 }
 
-func (pl *PlayerSquad) ChooseFirstAlive() *Player {
+func (pl *PlayerSquad) ChooseFirstAlive() I.Player {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		p := node.Value.(*Player)
+		p := node.Value.(I.Player)
 		if p.Alive() {
 			return p
 		}
@@ -186,11 +178,11 @@ func (pl *PlayerSquad) ChooseFirstAlive() *Player {
 	return nil
 }
 
-func (pl *PlayerSquad) ChooseRandomAlive() *Player {
+func (pl *PlayerSquad) ChooseRandomAlive() I.Player {
 	n := rand.Intn(pl.LenAlive())
 
 	for node := pl.list.Front(); node != nil; node = node.Next() {
-		p := node.Value.(*Player)
+		p := node.Value.(I.Player)
 		if p.Alive() {
 			if n == 0 {
 				return p

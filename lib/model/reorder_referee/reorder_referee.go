@@ -2,16 +2,15 @@ package reorder_referee
 
 import (
 	"log"
-	"zarg/lib/model/player"
-	"zarg/lib/model/user"
+	"zarg/lib/model/player/squad"
 )
 
 type ReorderReferee struct {
-	players *player.PlayerSquad
-	order   []*user.User
+	players *squad.PlayerSquad
+	order   []int
 }
 
-func New(players *player.PlayerSquad) *ReorderReferee {
+func New(players *squad.PlayerSquad) *ReorderReferee {
 	return &ReorderReferee{
 		players: players,
 		order:   nil,
@@ -19,27 +18,27 @@ func New(players *player.PlayerSquad) *ReorderReferee {
 }
 
 // returns true if state changed
-func (r *ReorderReferee) VoteStarter(u *user.User) bool {
-	if r.canVote(u) {
+func (r *ReorderReferee) VoteStarter(id int) bool {
+	if r.canVote(id) {
 		r.order = nil
-		r.order = append(r.order, u)
+		r.order = append(r.order, id)
 		return true
 	}
 	return false
 }
 
 // returns true if state changed
-func (r *ReorderReferee) VoteNext(u *user.User) bool {
-	if (r.order != nil && r.order[len(r.order)-1] == u) || !r.canVote(u) {
+func (r *ReorderReferee) VoteNext(id int) bool {
+	if (r.order != nil && r.order[len(r.order)-1] == id) || !r.canVote(id) {
 		return false
 	}
 	for i := 0; i < len(r.order); i += 1 {
-		if r.order[i] == u {
+		if r.order[i] == id {
 			r.order = append(r.order[:i], r.order[i+1:]...)
 			break
 		}
 	}
-	r.order = append(r.order, u)
+	r.order = append(r.order, id)
 	return true
 }
 
@@ -57,13 +56,14 @@ func (r *ReorderReferee) Apply() {
 
 func (r *ReorderReferee) OrderingInfo() string {
 	res := ""
-	for _, u := range r.order {
-		res += u.FullName() + " -> "
+	for _, id := range r.order {
+		p := r.players.GetByID(id)
+		res += p.FullName() + " -> "
 	}
 	return res + "..."
 }
 
-func (r *ReorderReferee) canVote(u *user.User) bool {
-	p := r.players.GetByUser(u)
+func (r ReorderReferee) canVote(id int) bool {
+	p := r.players.GetByID(id)
 	return p != nil && p.Alive()
 }

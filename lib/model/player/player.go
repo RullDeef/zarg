@@ -1,44 +1,82 @@
 package player
 
 import (
-	"zarg/lib/model/user"
-	"zarg/lib/model/weapon"
+	i "zarg/lib/model/interfaces"
 )
 
 const maxHealth = 100
 
 type Player struct {
-	user   *user.User
-	Health int
-	Weapon *weapon.Weapon
+	user   i.User
+	health int
+	weapon i.Weapon
 }
 
-func NewPlayer(user *user.User) *Player {
+func NewPlayer(user i.User) *Player {
 	return &Player{
 		user:   user,
-		Health: maxHealth,
-		Weapon: nil,
+		health: maxHealth,
+		weapon: nil,
 	}
 }
 
-func (p *Player) User() *user.User {
-	return p.user
+// User interface implementation
+func (p Player) ID() int {
+	return p.user.ID()
 }
 
-func (p *Player) Alive() bool {
-	return p.Health > 0
+// User interface implementation
+func (p Player) FirstName() string {
+	return p.user.FirstName()
 }
 
-func (p *Player) MakeDamage(val int) {
-	p.Health -= val
-	if p.Health < 0 {
-		p.Health = 0
+// User interface implementation
+func (p Player) LastName() string {
+	return p.user.LastName()
+}
+
+// User interface implementation
+func (p Player) FullName() string {
+	return p.user.FullName()
+}
+
+// Entity interface implementation
+func (p Player) Name() string {
+	return p.user.FullName()
+}
+
+// Entity interface implementation
+func (p Player) Health() int {
+	return p.health
+}
+
+// Entity interface implementation
+func (p *Player) Heal(value int) {
+	p.health += value
+	if p.health > maxHealth {
+		p.health = maxHealth
 	}
 }
 
-func (p *Player) Heal(val int) {
-	p.Health += val
-	if p.Health > maxHealth {
-		p.Health = maxHealth
+// Entity interface implementation
+func (p *Player) Damage(value int) {
+	p.health -= value
+	if p.health < 0 {
+		p.health = 0
 	}
+}
+
+// Entity interface implementation
+func (p Player) Alive() bool {
+	return p.health > 0
+}
+
+// Player interface implementation
+func (p Player) Weapon() i.Weapon {
+	return p.weapon
+}
+
+// Player interface implementation
+func (p *Player) PickWeapon(w i.Weapon) {
+	p.weapon = w
 }

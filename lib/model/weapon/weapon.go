@@ -8,8 +8,8 @@ import (
 type WeaponKind int
 
 type Weapon struct {
-	Name   string
-	Attack int
+	name   string
+	attack int
 	Kind   WeaponKind
 	Tier   int
 }
@@ -40,8 +40,8 @@ var (
 
 func FistsWeapon(attackMean, attackDiff int) *Weapon {
 	return &Weapon{
-		Name:   "Кулаки",
-		Attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
+		name:   "Кулаки",
+		attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
 		Kind:   4,
 		Tier:   -1,
 	}
@@ -52,8 +52,8 @@ func RandomWeapon(tier int, attackMean, attackDiff int) *Weapon {
 	name := weaponNames[kind][rand.Int()%len(weaponNames[kind])]
 
 	return &Weapon{
-		Name:   name,
-		Attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
+		name:   name,
+		attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
 		Kind:   kind,
 		Tier:   tier,
 	}
@@ -67,18 +67,21 @@ func RandomWeapons(n int, tier int, attackMean, attackDiff int) []*Weapon {
 	return w
 }
 
-func (w Weapon) Summary() string {
-	name := w.Name
-	if w.Tier >= 0 {
-		name += " " + tierStrings[w.Tier]
-	}
-	return fmt.Sprintf("%s. Атака - %d", name, w.Attack)
+// Weapon interface implementation
+func (w Weapon) Description() string {
+	return fmt.Sprintf("Атака - %d", w.attack)
 }
 
-func (w Weapon) SummaryShort() string {
-	name := w.Name
+// Weapon interface implementation
+func (w Weapon) Title() string {
+	name := w.name
 	if w.Tier >= 0 {
 		name += " " + tierStrings[w.Tier]
 	}
 	return name
+}
+
+// Weapon interface implementation
+func (w Weapon) Attack() int {
+	return w.attack
 }

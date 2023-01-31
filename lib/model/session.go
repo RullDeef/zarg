@@ -8,17 +8,21 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"zarg/lib/model/enemy"
+	enemySquad "zarg/lib/model/enemy/squad"
+	I "zarg/lib/model/interfaces"
 	"zarg/lib/model/player"
+	"zarg/lib/model/player/squad"
 	"zarg/lib/model/reorder_referee"
 	"zarg/lib/model/trap"
 	"zarg/lib/model/weapon"
-	"zarg/lib/model/weapon/weaponshowcase"
+	"zarg/lib/model/weapon/showcase"
 	"zarg/lib/utils"
 )
 
 type Session struct {
 	interactor Interactor
-	players    *player.PlayerSquad
+	players    *squad.PlayerSquad
 	onDone     func()
 	cancelFunc func()
 	pauser     *utils.Pauser
@@ -28,7 +32,7 @@ func NewSession(i Interactor, onDone func()) *Session {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Session{
 		interactor: i,
-		players:    player.NewPlayerSquad(),
+		players:    squad.NewPlayerSquad(),
 		onDone:     onDone,
 		cancelFunc: cancel,
 		pauser:     utils.NewPauser(),
@@ -106,15 +110,15 @@ func (s *Session) gatherPlayers(ctx context.Context) bool {
 	s.receiveWithAlert(ctx, 30*time.Second, func(umsg UserMessage, _ func()) {
 		msg := strings.ToLower(strings.TrimSpace(umsg.Message))
 		if msg == "я" {
-			if p := s.players.GetByUser(umsg.User); p != nil {
+			if p := s.players.GetByID(umsg.User.ID()); p != nil {
 				s.interactor.Printf("%s уже в списке!", umsg.User.FullName())
 			} else {
 				s.players.Add(player.NewPlayer(umsg.User))
 				s.interactor.Printf("%s участвует в походе!", umsg.User.FullName())
 			}
 		} else if msg == "не я" {
-			if p := s.players.RemoveByID(umsg.User.ID); p != nil {
-				s.interactor.Printf("%s вычеркнут(-а) из списка.", p.User().FullName())
+			if p := s.players.RemoveByID(umsg.User.ID()); p != nil {
+				s.interactor.Printf("%s вычеркнут(-а) из списка.", p.FullName())
 			}
 		}
 	}, 20*time.Second, "10 секунд до окончания сбора!")
@@ -138,7 +142,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 	const totalWeapons = 6
 	nChosen := 0 // amount of players that already picked weapon
 
-	weaponShowcase := weaponshowcase.NewWeaponShowcase(totalWeapons, func() *weapon.Weapon {
+	weaponShowcase := showcase.NewWeaponShowcase(totalWeapons, func() I.Weapon {
 		return weapon.RandomWeapon(0, 6, 2)
 	})
 
@@ -155,7 +159,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 		}
 
 		// find player that chooses
-		if p := s.players.GetByID(umsg.User.ID); p != nil {
+		if p := s.players.GetByID(umsg.User.ID()); p != nil {
 			hadNoWeapon := !weaponShowcase.HasMadePick(p)
 			ok, w, other := weaponShowcase.TryPick(p, opt-1)
 
@@ -163,9 +167,9 @@ func (s *Session) pickWeapons(ctx context.Context) {
 				if hadNoWeapon {
 					nChosen += 1
 				}
-				s.interactor.Printf("%s выбирает %s.", p.User().FullName(), w.SummaryShort())
+				s.interactor.Printf("%s выбирает %s.", p.FullName(), w.Title())
 			} else {
-				s.interactor.Printf("%s уже выбрал %s!", w.SummaryShort(), other.User().FullName())
+				s.interactor.Printf("%s уже выбрал %s!", w.Title(), other.FullName())
 			}
 		}
 
@@ -180,9 +184,9 @@ func (s *Session) pickWeapons(ctx context.Context) {
 	if !canceled {
 		weaponShowcase.ConfirmPick()
 		s.interactor.Printf("Выдвигаемся! А кто не успел схватиться за оружие будет сражаться кулаками!")
-		s.players.Foreach(func(_ int, p *player.Player) {
-			if p.Weapon == nil {
-				p.Weapon = weapon.FistsWeapon(5, 1)
+		s.players.ForEach(func(p I.Player) {
+			if p.Weapon() == nil {
+				p.PickWeapon(weapon.FistsWeapon(5, 1))
 			}
 		})
 	}
@@ -194,7 +198,7 @@ func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 	referee := reorder_referee.New(s.players)
 	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg UserMessage, cancel func()) {
 		msg := strings.ToLower(strings.TrimSpace(umsg.Message))
-		if (msg == "я" && referee.VoteStarter(umsg.User)) || (msg == "потом я" && referee.VoteNext(umsg.User)) {
+		if (msg == "я" && referee.VoteStarter(umsg.User.ID())) || (msg == "потом я" && referee.VoteNext(umsg.User.ID())) {
 			if referee.Completed() {
 				referee.Apply()
 				s.interactor.Printf("Очередность установлена!\n%s\n", s.players.OrderingString())
@@ -215,9 +219,9 @@ func (s *Session) explore(ctx context.Context, fm *FloorMaze) {
 
 	roomProbGen := utils.NewPropMap()
 	// roomProbGen.Add("enemy", 4)
-	// roomProbGen.Add("treasure", 3)
+	roomProbGen.Add("treasure", 3)
 	// roomProbGen.Add("trap", 2)
-	roomProbGen.Add("rest", 2)
+	// roomProbGen.Add("rest", 2)
 
 	//for i := 0; i < fm.roomsCount; i++ {
 	for {
@@ -245,9 +249,24 @@ func (s *Session) explore(ctx context.Context, fm *FloorMaze) {
 func (s *Session) exploreEnemiesRoom(ctx context.Context, fm *FloorMaze) {
 	s.interactor.Printf("Вы не одни... На вас напали!")
 
-	enemySquad := NewEnemySquad(2+rand.Intn(2), func() *Enemy {
-		tier := fm.tierMin + rand.Intn(fm.tierMax-fm.tierMin+1)
-		return RandomEnemy(tier, 9, 2)
+	enemySquad := enemySquad.New(2+rand.Intn(2), func() I.Enemy {
+		return enemy.Random(11, 3, func(e *enemy.Enemy) {
+			p := s.players.ChooseRandomAlive()
+			healthBefore := p.Health()
+			p.Damage(e.AttackPower())
+
+			if p.Alive() {
+				s.interactor.Printf("%s атакует %s. (HP:%d->%d)", e.Name, p.FullName(), healthBefore, p.Health)
+				if s.makePauseFor(ctx, time.Second) != nil {
+					return
+				}
+			} else {
+				s.interactor.Printf("%s атакует %s. %s убит!", e.Name, p.FullName(), p.FullName())
+				if s.makePauseFor(ctx, 5*time.Second) != nil {
+					return
+				}
+			}
+		})
 	})
 
 	// show battle overall info
@@ -287,8 +306,8 @@ func (s *Session) exploreEnemiesRoom(ctx context.Context, fm *FloorMaze) {
 	}
 }
 
-func (s *Session) makePlayerAction(ctx context.Context, p *player.Player, es *EnemySquad) {
-	s.interactor.Printf("Ходит %s.", p.User().FullName())
+func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySquad.EnemySquad) {
+	s.interactor.Printf("Ходит %s.", p.FullName())
 
 	if s.makePauseFor(ctx, 5*time.Second) != nil {
 		return
@@ -297,19 +316,19 @@ func (s *Session) makePlayerAction(ctx context.Context, p *player.Player, es *En
 	optsInfo := "Варианты действия:\n"
 	opts := map[int]func(){}
 	i := 1
-	es.ForeachAlive(func(_ int, e *Enemy) {
-		h1, h2 := e.Health, e.Health-p.Weapon.Attack
+	es.ForEachAlive(func(e I.Enemy) {
+		h1, h2 := e.Health(), e.Health()-p.Weapon().Attack()
 		if h2 > 0 {
-			optsInfo += fmt.Sprintf("%d) Атаковать %s (HP: %d->%d)\n", i, e.Name, h1, h2)
+			optsInfo += fmt.Sprintf("%d) Атаковать %s (HP: %d->%d)\n", i, e.Name(), h1, h2)
 			opts[i] = func() {
-				s.interactor.Printf("%s атакует %s", p.User().FullName(), e.Name)
-				e.MakeDamage(p.Weapon.Attack)
+				s.interactor.Printf("%s атакует %s", p.FullName(), e.Name())
+				e.Damage(p.Weapon().Attack())
 			}
 		} else {
-			optsInfo += fmt.Sprintf("%d) Убить %s\n", i, e.Name)
+			optsInfo += fmt.Sprintf("%d) Убить %s\n", i, e.Name())
 			opts[i] = func() {
-				s.interactor.Printf("%s убивает %s", p.User().FullName(), e.Name)
-				e.MakeDamage(p.Weapon.Attack)
+				s.interactor.Printf("%s убивает %s", p.FullName(), e.Name())
+				e.Damage(p.Weapon().Attack())
 			}
 		}
 		i += 1
@@ -318,7 +337,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p *player.Player, es *En
 
 	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg UserMessage, cancel func()) {
 		opt, err := strconv.Atoi(umsg.Message)
-		if umsg.User == p.User() && err == nil {
+		if umsg.User.ID() == p.ID() && err == nil {
 			if action := opts[opt]; action != nil {
 				action()
 				cancel()
@@ -327,35 +346,22 @@ func (s *Session) makePlayerAction(ctx context.Context, p *player.Player, es *En
 	}, 45*time.Second, "Ещё 15 секунд, чтобы сделать выбор!")
 
 	if !canceled {
-		s.interactor.Printf("%s решает пропустить ход!", p.User().FullName())
+		s.interactor.Printf("%s решает пропустить ход!", p.FullName())
 	}
 }
 
-func (s *Session) makeEnemyAction(ctx context.Context, e *Enemy, es *EnemySquad) {
+func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad.EnemySquad) {
 	s.interactor.Printf("Ходит %s.", e.Name)
 	if s.makePauseFor(ctx, 3*time.Second) != nil {
 		return
 	}
 
-	p := s.players.ChooseRandomAlive()
-	healthBefore := p.Health
-	p.MakeDamage(e.Attack)
-
-	if p.Alive() {
-		s.interactor.Printf("%s атакует %s. (HP:%d->%d)", e.Name, p.User().FullName(), healthBefore, p.Health)
-		if s.makePauseFor(ctx, time.Second) != nil {
-			return
-		}
-	} else {
-		s.interactor.Printf("%s атакует %s. %s убит!", e.Name, p.User().FullName(), p.User().FullName())
-		if s.makePauseFor(ctx, 5*time.Second) != nil {
-			return
-		}
-	}
+	e.Attack()
 }
 
 func (s *Session) exploreTreasureRoom(ctx context.Context, fm *FloorMaze) {
 	s.interactor.Printf("Вы находите комнату с сокровищами.")
+	s.interactor.Printf("Но пока что здесь пусто... Разработчик еще не добавил ништяков...")
 }
 
 func (s *Session) exploreTrapRoom(ctx context.Context, fm *FloorMaze) {
@@ -387,9 +393,9 @@ func (s *Session) exploreTrapRoom(ctx context.Context, fm *FloorMaze) {
 	var killedNames []string
 	for _, p := range damaged {
 		if !p.Alive() {
-			killedNames = append(killedNames, p.User().FullName())
+			killedNames = append(killedNames, p.FullName())
 		} else {
-			info += fmt.Sprintf("%s (HP:->%d)\n", p.User().FullName(), p.Health)
+			info += fmt.Sprintf("%s (HP:->%d)\n", p.FullName(), p.Health())
 		}
 	}
 
@@ -413,7 +419,7 @@ func (s *Session) exploreRestRoom(ctx context.Context, fm *FloorMaze) {
 		return
 	}
 
-	s.players.ForeachAlive(func(_ int, p *player.Player) {
+	s.players.ForEachAlive(func(p I.Player) {
 		p.Heal(50)
 	})
 	s.interactor.Printf("+50HP всем игрокам.")
@@ -426,7 +432,7 @@ func (s *Session) exploreRestRoom(ctx context.Context, fm *FloorMaze) {
 	defer cancel()
 
 	s.receivePauseAware(ctx, func(umsg UserMessage) {
-		p := s.players.GetByUser(umsg.User)
+		p := s.players.GetByID(umsg.User.ID())
 		if p == nil || reordering {
 			return
 		}

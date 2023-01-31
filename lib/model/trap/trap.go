@@ -2,7 +2,8 @@ package trap
 
 import (
 	"log"
-	"zarg/lib/model/player"
+	I "zarg/lib/model/interfaces"
+	"zarg/lib/model/player/squad"
 )
 
 type DamageType int
@@ -36,7 +37,7 @@ func (t *Trap) DamagesEveryone() bool {
 }
 
 // returns players damaged by this trap
-func (t *Trap) Activate(pl *player.PlayerSquad) []*player.Player {
+func (t *Trap) Activate(pl *squad.PlayerSquad) []I.Player {
 	switch t.damageType {
 	case DamageFirst:
 		return t.damageFirst(pl)
@@ -50,23 +51,23 @@ func (t *Trap) Activate(pl *player.PlayerSquad) []*player.Player {
 	}
 }
 
-func (t *Trap) damageFirst(pl *player.PlayerSquad) []*player.Player {
+func (t *Trap) damageFirst(pl *squad.PlayerSquad) []I.Player {
 	p := pl.ChooseFirstAlive()
-	p.MakeDamage(t.attack)
-	return append(make([]*player.Player, 0, 1), p)
+	p.Damage(t.attack)
+	return append(make([]I.Player, 0, 1), p)
 }
 
-func (t *Trap) damageRandom(pl *player.PlayerSquad) []*player.Player {
+func (t *Trap) damageRandom(pl *squad.PlayerSquad) []I.Player {
 	p := pl.ChooseRandomAlive()
-	p.MakeDamage(t.attack)
-	return append(make([]*player.Player, 0, 1), p)
+	p.Damage(t.attack)
+	return append(make([]I.Player, 0, 1), p)
 }
 
-func (t *Trap) damageEveryone(pl *player.PlayerSquad) []*player.Player {
-	var res []*player.Player
+func (t *Trap) damageEveryone(pl *squad.PlayerSquad) []I.Player {
+	var res []I.Player
 
-	pl.ForeachAlive(func(_ int, p *player.Player) {
-		p.MakeDamage(t.attack)
+	pl.ForEachAlive(func(p I.Player) {
+		p.Damage(t.attack)
 		res = append(res, p)
 	})
 
