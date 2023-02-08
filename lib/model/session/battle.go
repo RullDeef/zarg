@@ -22,8 +22,9 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 	battleInfo := fmt.Sprintf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
 	s.Printf(battleInfo)
 
-	turnsPlayers := s.players.LenAlive()
-	turnsEnemies := es.LenAlive()
+	// TODO: make general turn referee
+	turnsMadePlayers := 0
+	turnsMadeEnemies := 0
 
 	for es.LenAlive() > 0 && s.players.LenAlive() > 0 {
 		if s.makePauseFor(ctx, time.Second) != nil {
@@ -32,13 +33,8 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 
 		// make turn generator
 		turnGen := utils.NewPropMap()
-
-		if turnsPlayers > 0 {
-			turnGen.Add("players", turnsPlayers)
-		}
-		if turnsEnemies > 0 {
-			turnGen.Add("enemies", turnsEnemies)
-		}
+		turnGen.Add("players", utils.MaxInt(0, s.players.LenAlive()-turnsMadePlayers))
+		turnGen.Add("enemies", utils.MaxInt(0, es.LenAlive()-turnsMadeEnemies))
 
 		switch turnGen.Choose().(string) {
 		case "players":
@@ -46,18 +42,18 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 			s.Printf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
 			p := s.players.ChooseNext()
 			s.makePlayerAction(ctx, p, es)
-			turnsPlayers -= 1
+			turnsMadePlayers += 1
 		case "enemies":
 			e := es.ChooseNext()
 			s.makeEnemyAction(ctx, e, es)
-			turnsEnemies -= 1
+			turnsMadeEnemies += 1
 		default:
 			s.logger.Panicf("must never happen!")
 		}
 
-		if turnsPlayers == 0 && turnsEnemies == 0 {
-			turnsPlayers = s.players.LenAlive()
-			turnsEnemies = es.LenAlive()
+		if turnsMadePlayers >= s.players.LenAlive() && turnsMadeEnemies >= es.LenAlive() {
+			turnsMadePlayers = 0
+			turnsMadeEnemies = 0
 		}
 	}
 
