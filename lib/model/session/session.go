@@ -233,19 +233,20 @@ func (s *Session) explore(ctx context.Context, fm *floormaze.FloorMaze) {
 			return
 		}
 
-		room := fm.NextRoom()
-		switch room.(type) {
-		case floormaze.EnemyRoom:
-			s.exploreEnemiesRoom(ctx, room.(*floormaze.EnemyRoom))
-		case floormaze.TrapRoom:
-			s.exploreTrapRoom(ctx, room.(*floormaze.TrapRoom))
-		case floormaze.TreasureRoom:
-			s.exploreTreasureRoom(ctx, room.(*floormaze.TreasureRoom))
-		case floormaze.RestRoom:
-			s.exploreRestRoom(ctx, room.(*floormaze.RestRoom))
-		case floormaze.BossRoom:
-			s.exploreBossRoom(ctx, room.(*floormaze.BossRoom))
+		switch room := fm.NextRoom().(type) {
+		case *floormaze.EnemyRoom:
+			s.exploreEnemiesRoom(ctx, room)
+		case *floormaze.TrapRoom:
+			s.exploreTrapRoom(ctx, room)
+		case *floormaze.TreasureRoom:
+			s.exploreTreasureRoom(ctx, room)
+		case *floormaze.RestRoom:
+			s.exploreRestRoom(ctx, room)
+		case *floormaze.BossRoom:
+			s.exploreBossRoom(ctx, room)
 			return
+		default:
+			s.logger.Panicf("bad room type!")
 		}
 	}
 }

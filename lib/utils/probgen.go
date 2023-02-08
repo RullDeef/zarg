@@ -12,7 +12,9 @@ func NewPropMap() *ProbMap {
 }
 
 func (p *ProbMap) Add(key any, val int) {
-	(*p)[key] += val
+	if val != 0 {
+		(*p)[key] += val
+	}
 }
 
 func (p *ProbMap) Choose() any {
