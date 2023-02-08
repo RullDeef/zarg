@@ -204,3 +204,35 @@ func (pl *PlayerSquad) ChooseRandomAlive() I.Player {
 	log.Panic("everyone dead, nothing to choose from!")
 	return nil
 }
+
+func (pl *PlayerSquad) ChooseRandomAlivePreferBlocking() I.Player {
+	blocks := pl.countBlocks()
+	if blocks == 0 {
+		return pl.ChooseRandomAlive()
+	}
+
+	n := rand.Intn(blocks)
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		p := node.Value.(I.Player)
+		if p.Alive() && p.IsBlocking() {
+			if n == 0 {
+				return p
+			}
+			n -= 1
+		}
+	}
+
+	log.Panic("must never happen!")
+	return nil
+}
+
+func (pl *PlayerSquad) countBlocks() int {
+	blocks := 0
+	for node := pl.list.Front(); node != nil; node = node.Next() {
+		p := node.Value.(I.Player)
+		if p.Alive() && p.IsBlocking() {
+			blocks += 1
+		}
+	}
+	return blocks
+}

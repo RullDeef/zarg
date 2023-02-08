@@ -1,5 +1,7 @@
 package interfaces
 
+import "context"
+
 type User interface {
 	ID() int
 	FirstName() string
@@ -25,6 +27,9 @@ type Player interface {
 	PickWeapon(Weapon)
 
 	Attack() DamageStats
+
+	BlockAttack()
+	IsBlocking() bool
 
 	PickItem(Pickable)
 	DropItem(Pickable)
@@ -71,12 +76,15 @@ type Pickable interface {
 type Usable interface {
 	Pickable
 
+	Description() string
 	Use()
 	IsUsed() bool
 }
 
 type Consumable interface {
 	Pickable
+
+	Description() string
 
 	UsesLeft() int
 	Consume()
@@ -101,6 +109,14 @@ type WeaponShowcase interface {
 	ConfirmPick()
 }
 
-type BaseSession interface {
+type UserMessage interface {
+	User() User
+	Message() string
+}
+
+type Interactor interface {
 	Printf(fmt string, args ...any)
+
+	// gets a messages from chat.
+	Receive(ctx context.Context, f func(UserMessage)) error
 }

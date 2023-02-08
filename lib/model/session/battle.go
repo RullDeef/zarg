@@ -42,6 +42,9 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 	battleInfo := fmt.Sprintf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
 	s.interactor.Printf(battleInfo)
 
+	turnsPlayers := s.players.LenAlive()
+	turnsEnemies := es.LenAlive()
+
 	for es.LenAlive() > 0 && s.players.LenAlive() > 0 {
 		if s.makePauseFor(ctx, time.Second) != nil {
 			return
@@ -50,8 +53,12 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 		// make turn generator
 		turnGen := utils.NewPropMap()
 
-		turnGen.Add("players", s.players.LenAlive())
-		turnGen.Add("enemies", es.LenAlive())
+		if turnsPlayers > 0 {
+			turnGen.Add("players", turnsPlayers)
+		}
+		if turnsEnemies > 0 {
+			turnGen.Add("enemies", turnsEnemies)
+		}
 
 		switch turnGen.Choose().(string) {
 		case "players":
@@ -60,11 +67,18 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 			s.interactor.Printf(battleInfo)
 			p := s.players.ChooseNext()
 			s.makePlayerAction(ctx, p, es)
+			turnsPlayers -= 1
 		case "enemies":
 			e := es.ChooseNext()
 			s.makeEnemyAction(ctx, e, es)
+			turnsEnemies -= 1
 		default:
 			log.Fatal("must never happen!")
+		}
+
+		if turnsPlayers == 0 && turnsEnemies == 0 {
+			turnsPlayers = s.players.LenAlive()
+			turnsEnemies = es.LenAlive()
 		}
 	}
 
@@ -88,20 +102,47 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	es.ForEachAlive(func(e I.Enemy) {
 		optsInfo += fmt.Sprintf("%d) Атаковать %s (HP: %d)\n", i, e.Name(), e.Health())
 		opts[i] = func() {
-			dmg := e.Damage(p.Weapon().Attack())
+			dmg := e.Damage(p.Attack())
 			if e.Alive() {
 				s.interactor.Printf("%s атакует %s и наносит %d урона.", p.FullName(), e.Name(), dmg)
 			} else {
-				s.interactor.Printf("%s убивает %s", p.FullName(), e.Name())
+				s.interactor.Printf("%s убивает %s.", p.FullName(), e.Name())
 			}
 		}
-		i += 1
+		i++
 	})
+	// add block option
+	optsInfo += fmt.Sprintf("%d) Поставить блок (x0.8DMG)\n", i)
+	opts[i] = func() {
+		p.BlockAttack()
+		s.interactor.Printf("%s ставит блок!", p.FullName())
+	}
+	i++
+	p.ForEachItem(func(item I.Pickable) {
+		if usable, ok := item.(I.Usable); ok {
+			if !usable.IsUsed() {
+				opts[i] = func() {
+					usable.Use()
+				}
+				optsInfo += fmt.Sprintf("%d) Использовать %s (%s)\n", i, usable.Name(), usable.Description())
+				i++
+			}
+		} else if cons, ok := item.(I.Consumable); ok {
+			if cons.UsesLeft() > 0 {
+				opts[i] = func() {
+					cons.Consume()
+				}
+				optsInfo += fmt.Sprintf("%d) Использовать %s [x%d] (%s)\n", i, cons.Name(), cons.UsesLeft(), cons.Description())
+				i++
+			}
+		}
+	})
+
 	s.interactor.Printf(optsInfo)
 
-	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg model.UserMessage, cancel func()) {
-		opt, err := strconv.Atoi(umsg.Message)
-		if umsg.User.ID() == p.ID() && err == nil {
+	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg I.UserMessage, cancel func()) {
+		opt, err := strconv.Atoi(umsg.Message())
+		if umsg.User().ID() == p.ID() && err == nil {
 			if action := opts[opt]; action != nil {
 				action()
 				cancel()
@@ -120,7 +161,7 @@ func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad
 		return
 	}
 
-	p := s.players.ChooseRandomAlive()
+	p := s.players.ChooseRandomAlivePreferBlocking()
 	dmg := p.Damage(e.Attack())
 
 	if p.Alive() {

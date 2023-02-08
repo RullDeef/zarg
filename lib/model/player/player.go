@@ -9,18 +9,20 @@ import (
 const maxHealth = 100
 
 type Player struct {
-	user   I.User
-	health int
-	weapon I.Weapon
-	items  []I.Pickable
+	user       I.User
+	health     int
+	weapon     I.Weapon
+	items      []I.Pickable
+	isBlocking bool
 }
 
 func NewPlayer(user I.User) *Player {
 	return &Player{
-		user:   user,
-		health: maxHealth,
-		weapon: nil,
-		items:  nil,
+		user:       user,
+		health:     maxHealth,
+		weapon:     nil,
+		items:      nil,
+		isBlocking: false,
 	}
 }
 
@@ -73,6 +75,12 @@ func (p *Player) Damage(dmg I.DamageStats) int {
 		val = dmg.Crit
 	}
 
+	// if is blocking - reduce to 80%
+	if p.isBlocking {
+		val = int(0.8 * float32(val))
+		p.isBlocking = false
+	}
+
 	p.health -= val
 	if p.health < 0 {
 		p.health = 0
@@ -102,7 +110,18 @@ func (p *Player) Attack() I.DamageStats {
 	for _, it := range p.items {
 		dmg = it.ModifyOutgoingDamage(dmg)
 	}
+	p.isBlocking = false
 	return dmg
+}
+
+// Player interface implementation
+func (p *Player) BlockAttack() {
+	p.isBlocking = true
+}
+
+// Player interface implementation
+func (p *Player) IsBlocking() bool {
+	return p.isBlocking
 }
 
 // Player interface implementation

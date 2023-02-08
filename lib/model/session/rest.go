@@ -29,13 +29,13 @@ func (s *Session) exploreRestRoom(ctx context.Context, fm *model.FloorMaze) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	s.receivePauseAware(ctx, func(umsg model.UserMessage) {
-		p := s.players.GetByID(umsg.User.ID())
+	s.receivePauseAware(ctx, func(umsg I.UserMessage) {
+		p := s.players.GetByID(umsg.User().ID())
 		if p == nil || reordering {
 			return
 		}
 
-		msg := strings.ToLower(strings.TrimSpace(umsg.Message))
+		msg := strings.ToLower(strings.TrimSpace(umsg.Message()))
 		if msg == "в путь" {
 			continueCounter += 1
 			if 2*continueCounter > s.players.LenAlive() {
@@ -62,5 +62,7 @@ func (s *Session) exploreRestRoom(ctx context.Context, fm *model.FloorMaze) {
 		}
 	})
 
-	s.interactor.Printf("Поход продолжается!")
+	if ctx.Err() == nil {
+		s.interactor.Printf("Поход продолжается!")
+	}
 }

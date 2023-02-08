@@ -3,12 +3,12 @@ package session
 import (
 	"context"
 	"time"
-	"zarg/lib/model"
+	I "zarg/lib/model/interfaces"
 	"zarg/lib/utils"
 )
 
 // returns true if was canceled
-func (s *Session) receiveWithAlert(ctx context.Context, d time.Duration, f func(umsg model.UserMessage, cancel func()), alertTime time.Duration, alertMsg string) bool {
+func (s *Session) receiveWithAlert(ctx context.Context, d time.Duration, f func(umsg I.UserMessage, cancel func()), alertTime time.Duration, alertMsg string) bool {
 	alarm := utils.AfterFunc(ctx, alertTime, s.pauser, func() {
 		s.interactor.Printf(alertMsg)
 	})
@@ -17,10 +17,10 @@ func (s *Session) receiveWithAlert(ctx context.Context, d time.Duration, f func(
 }
 
 // returns true if was canceled
-func (s *Session) receiveWithTimeout(ctx context.Context, d time.Duration, f func(umsg model.UserMessage, cancel func())) bool {
+func (s *Session) receiveWithTimeout(ctx context.Context, d time.Duration, f func(umsg I.UserMessage, cancel func())) bool {
 	ctx, cancel := s.timeoutFor(ctx, d)
 	canceled := false
-	s.receivePauseAware(ctx, func(umsg model.UserMessage) {
+	s.receivePauseAware(ctx, func(umsg I.UserMessage) {
 		f(umsg, func() {
 			canceled = true
 			cancel()
@@ -29,8 +29,8 @@ func (s *Session) receiveWithTimeout(ctx context.Context, d time.Duration, f fun
 	return canceled
 }
 
-func (s *Session) receivePauseAware(ctx context.Context, f func(model.UserMessage)) error {
-	return s.interactor.Receive(ctx, func(umsg model.UserMessage) {
+func (s *Session) receivePauseAware(ctx context.Context, f func(I.UserMessage)) error {
+	return s.interactor.Receive(ctx, func(umsg I.UserMessage) {
 		if !s.pauser.IsPaused() {
 			f(umsg)
 		}

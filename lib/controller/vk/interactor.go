@@ -1,4 +1,4 @@
-package controller
+package vk
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"zarg/lib/model"
+	I "zarg/lib/model/interfaces"
 	"zarg/lib/model/user"
 	"zarg/lib/utils"
 
@@ -90,7 +91,7 @@ func (i *VKInteractor) sendFakeMessage(userName string, msg string) {
 	i.pub.Publish(model.NewUserMessage(u, msg))
 }
 
-func (i *VKInteractor) Receive(ctx context.Context, f func(model.UserMessage)) error {
+func (i *VKInteractor) Receive(ctx context.Context, f func(I.UserMessage)) error {
 	s := utils.NewSubscriber(i.pub)
 	defer s.Unsubscribe()
 

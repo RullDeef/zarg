@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -16,14 +17,14 @@ import (
 )
 
 type Session struct {
-	interactor model.Interactor
+	interactor I.Interactor
 	players    *squad.PlayerSquad
 	onDone     func()
 	cancelFunc func()
 	pauser     *utils.Pauser
 }
 
-func NewSession(i model.Interactor, onDone func()) *Session {
+func NewSession(i I.Interactor, onDone func()) *Session {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Session{
 		interactor: i,
@@ -46,6 +47,12 @@ func (s *Session) Stop() {
 
 func (s *Session) startup(ctx context.Context) {
 	defer s.shutdown()
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("recovered from panic.")
+			s.interactor.Printf("К сожалению, произошли непредвиденные обстоятельства, и подземелье завалило. Больше героев никто не видел...")
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -73,9 +80,15 @@ func (s *Session) startup(ctx context.Context) {
 	}
 
 	// generate first floor maze
-	floorMaze := model.NewFloorMaze("Подземелье", 1, 3)
-	s.explore(ctx, floorMaze)
+	floorMaze := model.NewFloorMaze("Подземелье")
 
+	spoiler := "Псс, спойлер:\n"
+	for i := 0; i < floorMaze.RoomsCount(); i++ {
+		spoiler += "-> " + floorMaze.Room(i) + "\n"
+	}
+
+	s.interactor.Printf(spoiler)
+	s.explore(ctx, floorMaze)
 }
 
 func (s *Session) shutdown() {
@@ -92,17 +105,17 @@ func (s *Session) shutdown() {
 }
 
 func (s *Session) commandProcessor(ctx context.Context) {
-	s.interactor.Receive(ctx, func(umsg model.UserMessage) {
+	s.interactor.Receive(ctx, func(umsg I.UserMessage) {
 		if s.pauser.IsPaused() {
-			if umsg.Message == "/прод" {
+			if umsg.Message() == "/прод" {
 				s.interactor.Printf("Игра продолжается!")
 				s.pauser.Resume()
 			}
 		} else {
-			if umsg.Message == "/пауза" {
+			if umsg.Message() == "/пауза" {
 				s.pauser.Pause()
 				s.interactor.Printf("Игра на паузе! чтобы продолжить напишите \"/прод\".")
-			} else if umsg.Message == "/стат" {
+			} else if umsg.Message() == "/стат" {
 				s.interactor.Printf("Статы игроков:\n%s", s.players.Info())
 			}
 		}
@@ -112,17 +125,17 @@ func (s *Session) commandProcessor(ctx context.Context) {
 func (s *Session) gatherPlayers(ctx context.Context) bool {
 	s.interactor.Printf("Начинается сбор людей и нелюдей для похода в данж!\nЧтобы участвовать, напиши \"Я\".")
 
-	s.receiveWithAlert(ctx, 30*time.Second, func(umsg model.UserMessage, _ func()) {
-		msg := strings.ToLower(strings.TrimSpace(umsg.Message))
+	s.receiveWithAlert(ctx, 30*time.Second, func(umsg I.UserMessage, _ func()) {
+		msg := strings.ToLower(strings.TrimSpace(umsg.Message()))
 		if msg == "я" {
-			if p := s.players.GetByID(umsg.User.ID()); p != nil {
-				s.interactor.Printf("%s уже в списке!", umsg.User.FullName())
+			if p := s.players.GetByID(umsg.User().ID()); p != nil {
+				s.interactor.Printf("%s уже в списке!", umsg.User().FullName())
 			} else {
-				s.players.Add(player.NewPlayer(umsg.User))
-				s.interactor.Printf("%s участвует в походе!", umsg.User.FullName())
+				s.players.Add(player.NewPlayer(umsg.User()))
+				s.interactor.Printf("%s участвует в походе!", umsg.User().FullName())
 			}
 		} else if msg == "не я" {
-			if p := s.players.RemoveByID(umsg.User.ID()); p != nil {
+			if p := s.players.RemoveByID(umsg.User().ID()); p != nil {
 				s.interactor.Printf("%s вычеркнут(-а) из списка.", p.FullName())
 			}
 		}
@@ -157,14 +170,14 @@ func (s *Session) pickWeapons(ctx context.Context) {
 	ask += "И поторопитесь, через 30 секунд выдвигаемся!"
 	s.interactor.Printf(ask)
 
-	canceled := s.receiveWithAlert(ctx, 30*time.Second, func(umsg model.UserMessage, cancel func()) {
-		opt, err := strconv.Atoi(umsg.Message)
+	canceled := s.receiveWithAlert(ctx, 30*time.Second, func(umsg I.UserMessage, cancel func()) {
+		opt, err := strconv.Atoi(umsg.Message())
 		if err != nil || opt < 1 || opt > totalWeapons {
 			return
 		}
 
 		// find player that chooses
-		if p := s.players.GetByID(umsg.User.ID()); p != nil {
+		if p := s.players.GetByID(umsg.User().ID()); p != nil {
 			hadNoWeapon := !weaponShowcase.HasMadePick(p)
 			ok, w, other := weaponShowcase.TryPick(p, opt-1)
 
@@ -201,9 +214,10 @@ func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 	s.interactor.Printf("Определите очередность ходов для пошагового режима. Первый игрок должен написать \"я\", остальные - \"потом я\".")
 
 	referee := reorder_referee.New(s.players)
-	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg model.UserMessage, cancel func()) {
-		msg := strings.ToLower(strings.TrimSpace(umsg.Message))
-		if (msg == "я" && referee.VoteStarter(umsg.User.ID())) || (msg == "потом я" && referee.VoteNext(umsg.User.ID())) {
+	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg I.UserMessage, cancel func()) {
+		msg := strings.ToLower(strings.TrimSpace(umsg.Message()))
+		id := umsg.User().ID()
+		if (msg == "я" && referee.VoteStarter(id)) || (msg == "потом я" && referee.VoteNext(id)) {
 			if referee.Completed() {
 				referee.Apply()
 				s.interactor.Printf("Очередность установлена!\n%s\n", s.players.OrderingString())
@@ -222,19 +236,12 @@ func (s *Session) explore(ctx context.Context, fm *model.FloorMaze) {
 		return
 	}
 
-	roomProbGen := utils.NewPropMap()
-	// roomProbGen.Add("enemy", 4)
-	roomProbGen.Add("treasure", 3)
-	// roomProbGen.Add("trap", 2)
-	// roomProbGen.Add("rest", 2)
-
-	//for i := 0; i < fm.roomsCount; i++ {
 	for {
 		if s.makePauseFor(ctx, 3*time.Second) != nil {
 			return
 		}
 
-		switch roomProbGen.Choose().(string) {
+		switch fm.NextRoom() {
 		case "enemy":
 			s.exploreEnemiesRoom(ctx, fm)
 		case "treasure":
@@ -243,10 +250,14 @@ func (s *Session) explore(ctx context.Context, fm *model.FloorMaze) {
 			s.exploreTrapRoom(ctx, fm)
 		case "rest":
 			s.exploreRestRoom(ctx, fm)
+		case "boss":
+			s.exploreBossRoom(ctx, fm)
+			return
 		}
 
 		if s.players.LenAlive() == 0 {
 			return
 		}
 	}
+
 }

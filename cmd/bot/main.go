@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
-	"zarg/lib/controller"
-	"zarg/lib/model"
+	vkInteractor "zarg/lib/controller/vk"
+	I "zarg/lib/model/interfaces"
 	"zarg/lib/service"
 
 	"github.com/SevereCloud/vksdk/v2/api"
@@ -57,9 +57,9 @@ func makeLongpollHandler(vk *api.VK) func(context.Context, events.MessageNewObje
 		msg := obj.Message.Text
 		log.Printf("%d: %s\n", chatID, msg)
 
-		i := sessionBroker.Interactor(chatID, func() model.Interactor {
-			return controller.NewVKInteractor(vk, chatID)
-		}).(*controller.VKInteractor)
+		i := sessionBroker.Interactor(chatID, func() I.Interactor {
+			return vkInteractor.NewVKInteractor(vk, chatID)
+		}).(*vkInteractor.VKInteractor)
 
 		cmd := strings.ToLower(strings.TrimSpace(msg))
 

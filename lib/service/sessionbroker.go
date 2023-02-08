@@ -3,26 +3,26 @@ package service
 import (
 	"log"
 	"sync"
-	"zarg/lib/model"
+	I "zarg/lib/model/interfaces"
 	"zarg/lib/model/session"
 )
 
 // service for managing interactors and sessions
 type SessionBroker struct {
-	interactors map[int]model.Interactor
+	interactors map[int]I.Interactor
 	sessions    map[int]*session.Session
 	lock        sync.RWMutex
 }
 
 func NewSessionBroker() *SessionBroker {
 	return &SessionBroker{
-		interactors: map[int]model.Interactor{},
+		interactors: map[int]I.Interactor{},
 		sessions:    map[int]*session.Session{},
 		lock:        sync.RWMutex{},
 	}
 }
 
-func (sb *SessionBroker) Interactor(chatID int, builder func() model.Interactor) model.Interactor {
+func (sb *SessionBroker) Interactor(chatID int, builder func() I.Interactor) I.Interactor {
 	sb.lock.Lock()
 	defer sb.lock.Unlock()
 
