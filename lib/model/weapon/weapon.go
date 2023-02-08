@@ -62,19 +62,34 @@ func RandomWeapons(n int, attackMean, attackDiff int) []*Weapon {
 	return w
 }
 
-// Weapon interface implementation
-func (w Weapon) Description() string {
-	return fmt.Sprintf("Атака - %d", w.attack)
-}
-
-// Weapon interface implementation
-func (w Weapon) Title() string {
+// Pickable interface implementation
+func (w *Weapon) Name() string {
 	return w.name
 }
 
+// Pickable interface implementation
+func (w *Weapon) Owner() I.Player {
+	return w.owner
+}
+
+// Pickable interface implementation
+func (w *Weapon) SetOwner(player I.Player) {
+	w.owner = player
+}
+
+// Pickable interface implementation
+func (w *Weapon) ModifyOngoingDamage(ds I.DamageStats) I.DamageStats {
+	return ds
+}
+
+// Pickable interface implementation
+func (w *Weapon) ModifyOutgoingDamage(ds I.DamageStats) I.DamageStats {
+	return ds
+}
+
 // Weapon interface implementation
-func (w *Weapon) SetOwner(p I.Player) {
-	w.owner = p
+func (w Weapon) Description() string {
+	return fmt.Sprintf("Атака - %d", w.attack)
 }
 
 // Weapon interface implementation

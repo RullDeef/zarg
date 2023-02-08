@@ -45,10 +45,10 @@ type PlayerList interface {
 }
 
 type Weapon interface {
-	Title() string
+	Pickable
+
 	Description() string
 
-	SetOwner(Player)
 	Attack() DamageStats
 }
 

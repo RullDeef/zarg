@@ -118,7 +118,7 @@ func (pl *PlayerSquad) Info() string {
 		p := node.Value.(I.Player)
 		if p.Alive() {
 			inf += fmt.Sprintf("%s: HP=%d\n", p.FullName(), p.Health())
-			inf += fmt.Sprintf("%s. %s.\n", p.Weapon().Title(), p.Weapon().Description())
+			inf += fmt.Sprintf("%s. %s.\n", p.Weapon().Name(), p.Weapon().Description())
 			var items []string
 			p.ForEachItem(func(p I.Pickable) {
 				items = append(items, p.Name())

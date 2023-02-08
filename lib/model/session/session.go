@@ -181,9 +181,9 @@ func (s *Session) pickWeapons(ctx context.Context) {
 				if hadNoWeapon {
 					nChosen += 1
 				}
-				s.Printf("%s выбирает %s.", p.FullName(), w.Title())
+				s.Printf("%s выбирает %s.", p.FullName(), w.Name())
 			} else {
-				s.Printf("%s уже выбрал %s!", w.Title(), other.FullName())
+				s.Printf("%s уже выбрал %s!", w.Name(), other.FullName())
 			}
 		}
 

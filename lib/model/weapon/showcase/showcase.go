@@ -32,7 +32,7 @@ func NewWeaponShowcase(n int, maker func() I.Weapon) *WeaponShowcase {
 func (ws *WeaponShowcase) WeaponsInfo() string {
 	res := ""
 	for i, weapon := range ws.weapons {
-		res += fmt.Sprintf("  %d) %s. %s\n", i+1, weapon.Title(), weapon.Description())
+		res += fmt.Sprintf("  %d) %s. %s\n", i+1, weapon.Name(), weapon.Description())
 	}
 	return res
 }
