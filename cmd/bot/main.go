@@ -55,7 +55,6 @@ func makeLongpollHandler(vk *api.VK) func(context.Context, events.MessageNewObje
 	return func(_ context.Context, obj events.MessageNewObject) {
 		chatID := obj.Message.PeerID
 		msg := obj.Message.Text
-		log.Printf("%d: %s\n", chatID, msg)
 
 		i := sessionBroker.Interactor(chatID, func() I.Interactor {
 			return vkInteractor.NewVKInteractor(vk, chatID)

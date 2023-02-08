@@ -56,8 +56,6 @@ func (i *VKInteractor) Printf(format string, a ...any) {
 	_, err := i.vk.MessagesSend(b.Params)
 	if err != nil {
 		log.Panic(err)
-	} else {
-		log.Printf("VKInteractor sent: \"%s\"", msg)
 	}
 }
 
@@ -69,7 +67,6 @@ func (i *VKInteractor) SendMessage(m events.MessageNewObject) {
 	re := regexp.MustCompile(`^([^:]+?)\s*:\s*([^:]+?)$`)
 	if match := re.FindStringSubmatch(msg); match != nil {
 		msg, name := match[1], match[2]
-		log.Printf("fake message detected from \"%s\": \"%s\"", name, msg)
 		i.sendFakeMessage(name, msg)
 	} else {
 		i.sendChatMessage(userID, msg)
@@ -79,8 +76,9 @@ func (i *VKInteractor) SendMessage(m events.MessageNewObject) {
 func (i *VKInteractor) sendChatMessage(id int, msg string) {
 	i.lock.Lock()
 	u := i.lockedGetChatUser(id)
-	defer i.pub.Publish(model.NewUserMessage(u, msg))
-	defer i.lock.Unlock()
+	i.lock.Unlock()
+
+	i.pub.Publish(model.NewUserMessage(u, msg))
 }
 
 func (i *VKInteractor) sendFakeMessage(userName string, msg string) {

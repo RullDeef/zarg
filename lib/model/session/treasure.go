@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.TreasureRoom) {
-	s.interactor.Printf("Вы находите комнату с сокровищами.")
+	s.Printf("Вы находите комнату с сокровищами.")
 	if s.makePauseFor(ctx, 3*time.Second) != nil {
 		return
 	}
@@ -32,7 +32,7 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 	}
 
 	inf += "Каждый может забрать не более двух предметов!"
-	s.interactor.Printf(inf)
+	s.Printf(inf)
 
 	taken := make(map[int]int)
 
@@ -47,17 +47,17 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 		if room.Items[opt] == nil {
 			return
 		} else if taken[p.ID()] == 2 {
-			s.interactor.Printf("%s уже взял 2 предмета!", p.FullName())
+			s.Printf("%s уже взял 2 предмета!", p.FullName())
 		} else {
 			item := room.Items[opt]
 			room.Items[opt] = nil
 			taken[p.ID()] += 1
 
 			if x, ok := item.(I.Weapon); ok {
-				s.interactor.Printf("%s забирает %s!", p.FullName(), x.Title())
+				s.Printf("%s забирает %s!", p.FullName(), x.Title())
 				p.PickWeapon(x)
 			} else if x, ok := item.(*armor.ArmorItem); ok {
-				s.interactor.Printf("%s надевает %s!", p.FullName(), x.Name())
+				s.Printf("%s надевает %s!", p.FullName(), x.Name())
 				// drop other armor if has
 				p.ForEachItem(func(item I.Pickable) {
 					if x, ok := item.(*armor.ArmorItem); ok {
@@ -66,16 +66,16 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 				})
 				p.PickItem(x)
 			} else {
-				s.interactor.Printf("%s берёт %s!", p.FullName(), item.Name())
+				s.Printf("%s берёт %s!", p.FullName(), item.Name())
 				p.PickItem(item)
 			}
 
 			if len(taken) == len(room.Items) {
-				s.interactor.Printf("Все предметы разобрали! Продолжаем дальше!")
+				s.Printf("Все предметы разобрали! Продолжаем дальше!")
 				cancel()
 			}
 		}
 	}, 50*time.Second, "Осталось 10 секунд чтобы взять предметы!")
 
-	s.interactor.Printf("Статы игроков:\n%s", s.players.Info())
+	s.Printf("Статы игроков:\n%s", s.players.Info())
 }

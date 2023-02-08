@@ -10,12 +10,12 @@ import (
 )
 
 func (s *Session) exploreTrapRoom(ctx context.Context, room *floormaze.TrapRoom) {
-	s.interactor.Printf("Что-то подсказывает вам, что тут не все так безобидно, как кажется на первый взгляд.")
+	s.Printf("Что-то подсказывает вам, что тут не все так безобидно, как кажется на первый взгляд.")
 	if s.makePauseFor(ctx, 4*time.Second) != nil {
 		return
 	}
 
-	s.interactor.Printf(room.Trap.Name())
+	s.Printf(room.Trap.Name())
 	if s.makePauseFor(ctx, 2*time.Second) != nil {
 		return
 	}
@@ -45,5 +45,5 @@ func (s *Session) exploreTrapRoom(ctx context.Context, room *floormaze.TrapRoom)
 		}
 	}
 
-	s.interactor.Printf(info)
+	s.Printf(info)
 }

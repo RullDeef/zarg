@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -13,10 +12,12 @@ import (
 	"zarg/lib/model/reorder_referee"
 	"zarg/lib/model/weapon"
 	"zarg/lib/model/weapon/showcase"
+	"zarg/lib/service/logs"
 	"zarg/lib/utils"
 )
 
 type Session struct {
+	logger     *logs.Logger
 	interactor I.Interactor
 	players    *squad.PlayerSquad
 	onDone     func()
@@ -27,6 +28,7 @@ type Session struct {
 func NewSession(i I.Interactor, onDone func()) *Session {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Session{
+		logger:     logs.New(),
 		interactor: i,
 		players:    squad.NewPlayerSquad(),
 		onDone:     onDone,
@@ -49,8 +51,8 @@ func (s *Session) startup(ctx context.Context) {
 	defer s.shutdown()
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("recovered from panic.")
-			s.interactor.Printf("К сожалению, произошли непредвиденные обстоятельства, и подземелье завалило. Больше героев никто не видел...")
+			s.logger.Printf("recovered from panic: %s", err)
+			s.Printf("К сожалению, произошли непредвиденные обстоятельства, и подземелье завалило. Больше героев никто не видел...")
 		}
 	}()
 
@@ -71,7 +73,7 @@ func (s *Session) startup(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		s.interactor.Printf("Что ж, если вы не можете определиться с очередностью, командной работы точно не будет. Поход отменён.")
+		s.Printf("Что ж, если вы не можете определиться с очередностью, командной работы точно не будет. Поход отменён.")
 		return
 	}
 
@@ -93,7 +95,8 @@ func (s *Session) shutdown() {
 		s.cancelFunc()
 		s.cancelFunc = nil
 	}
-	s.interactor.Printf("Игровая сессия завершена.")
+	s.Printf("Игровая сессия завершена.")
+	s.logger.Close()
 	s.onDone()
 }
 
@@ -101,50 +104,50 @@ func (s *Session) commandProcessor(ctx context.Context) {
 	s.interactor.Receive(ctx, func(umsg I.UserMessage) {
 		if s.pauser.IsPaused() {
 			if umsg.Message() == "/прод" {
-				s.interactor.Printf("Игра продолжается!")
+				s.Printf("Игра продолжается!")
 				s.pauser.Resume()
 			}
 		} else {
 			if umsg.Message() == "/пауза" {
 				s.pauser.Pause()
-				s.interactor.Printf("Игра на паузе! чтобы продолжить напишите \"/прод\".")
+				s.Printf("Игра на паузе! чтобы продолжить напишите \"/прод\".")
 			} else if umsg.Message() == "/стат" {
-				s.interactor.Printf("Статы игроков:\n%s", s.players.Info())
+				s.Printf("Статы игроков:\n%s", s.players.Info())
 			}
 		}
 	})
 }
 
 func (s *Session) gatherPlayers(ctx context.Context) bool {
-	s.interactor.Printf("Начинается сбор людей и нелюдей для похода в данж!\nЧтобы участвовать, напиши \"Я\".")
+	s.Printf("Начинается сбор людей и нелюдей для похода в данж!\nЧтобы участвовать, напиши \"Я\".")
 
 	s.receiveWithAlert(ctx, 30*time.Second, func(umsg I.UserMessage, _ func()) {
 		msg := strings.ToLower(strings.TrimSpace(umsg.Message()))
 		if msg == "я" {
 			if p := s.players.GetByID(umsg.User().ID()); p != nil {
-				s.interactor.Printf("%s уже в списке!", umsg.User().FullName())
+				s.Printf("%s уже в списке!", umsg.User().FullName())
 			} else {
 				s.players.Add(player.NewPlayer(umsg.User()))
-				s.interactor.Printf("%s участвует в походе!", umsg.User().FullName())
+				s.Printf("%s участвует в походе!", umsg.User().FullName())
 			}
 		} else if msg == "не я" {
 			if p := s.players.RemoveByID(umsg.User().ID()); p != nil {
-				s.interactor.Printf("%s вычеркнут(-а) из списка.", p.FullName())
+				s.Printf("%s вычеркнут(-а) из списка.", p.FullName())
 			}
 		}
 	}, 20*time.Second, "10 секунд до окончания сбора!")
 
 	if s.players.Len() == 0 {
-		s.interactor.Printf("Cбор окончен! В поход не идёт никто.")
+		s.Printf("Cбор окончен! В поход не идёт никто.")
 		return false
 	} else if s.players.Len() == 1 {
-		s.interactor.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
+		s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
 		return false
 	}
 
 	res := "Сбор окончен! В поход собрались:\n"
 	res += s.players.ListString()
-	s.interactor.Printf(res)
+	s.Printf(res)
 	return true
 }
 
@@ -161,7 +164,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 	ask += "Выберите ваше оружие среди представленных:\n"
 	ask += weaponShowcase.WeaponsInfo()
 	ask += "И поторопитесь, через 30 секунд выдвигаемся!"
-	s.interactor.Printf(ask)
+	s.Printf(ask)
 
 	canceled := s.receiveWithAlert(ctx, 30*time.Second, func(umsg I.UserMessage, cancel func()) {
 		opt, err := strconv.Atoi(umsg.Message())
@@ -178,15 +181,15 @@ func (s *Session) pickWeapons(ctx context.Context) {
 				if hadNoWeapon {
 					nChosen += 1
 				}
-				s.interactor.Printf("%s выбирает %s.", p.FullName(), w.Title())
+				s.Printf("%s выбирает %s.", p.FullName(), w.Title())
 			} else {
-				s.interactor.Printf("%s уже выбрал %s!", w.Title(), other.FullName())
+				s.Printf("%s уже выбрал %s!", w.Title(), other.FullName())
 			}
 		}
 
 		if nChosen == s.players.Len() {
 			weaponShowcase.ConfirmPick()
-			s.interactor.Printf("Все выбрали по оружию, отправляемся в данж!")
+			s.Printf("Все выбрали по оружию, отправляемся в данж!")
 			cancel()
 			return
 		}
@@ -194,7 +197,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 
 	if !canceled {
 		weaponShowcase.ConfirmPick()
-		s.interactor.Printf("Выдвигаемся! А кто не успел схватиться за оружие будет сражаться кулаками!")
+		s.Printf("Выдвигаемся! А кто не успел схватиться за оружие будет сражаться кулаками!")
 		s.players.ForEach(func(p I.Player) {
 			if p.Weapon() == nil {
 				p.PickWeapon(weapon.FistsWeapon(5, 1))
@@ -204,7 +207,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 }
 
 func (s *Session) determinePlayersOrder(ctx context.Context) bool {
-	s.interactor.Printf("Определите очередность ходов для пошагового режима. Первый игрок должен написать \"я\", остальные - \"потом я\".")
+	s.Printf("Определите очередность ходов для пошагового режима. Первый игрок должен написать \"я\", остальные - \"потом я\".")
 
 	referee := reorder_referee.New(s.players)
 	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg I.UserMessage, cancel func()) {
@@ -213,10 +216,10 @@ func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 		if (msg == "я" && referee.VoteStarter(id)) || (msg == "потом я" && referee.VoteNext(id)) {
 			if referee.Completed() {
 				referee.Apply()
-				s.interactor.Printf("Очередность установлена!\n%s\n", s.players.OrderingString())
+				s.Printf("Очередность установлена!\n%s\n", s.players.OrderingString())
 				cancel()
 			} else {
-				s.interactor.Printf("Очередность: %s\n", referee.OrderingInfo())
+				s.Printf("Очередность: %s\n", referee.OrderingInfo())
 			}
 		}
 	}, 45*time.Second, "У вас еще 15 секунд, чтобы определиться!")

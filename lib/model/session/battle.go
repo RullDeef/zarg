@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 	enemySquad "zarg/lib/model/enemy/squad"
@@ -13,7 +12,7 @@ import (
 )
 
 func (s *Session) exploreEnemiesRoom(ctx context.Context, room *floormaze.EnemyRoom) {
-	s.interactor.Printf("Вы не одни... На вас напали!")
+	s.Printf("Вы не одни... На вас напали!")
 	s.PerformBattle(ctx, room.Enemies)
 }
 
@@ -21,7 +20,7 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 
 	// show battle overall info
 	battleInfo := fmt.Sprintf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
-	s.interactor.Printf(battleInfo)
+	s.Printf(battleInfo)
 
 	turnsPlayers := s.players.LenAlive()
 	turnsEnemies := es.LenAlive()
@@ -44,8 +43,7 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 		switch turnGen.Choose().(string) {
 		case "players":
 			// show battle overall info
-			battleInfo := fmt.Sprintf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
-			s.interactor.Printf(battleInfo)
+			s.Printf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
 			p := s.players.ChooseNext()
 			s.makePlayerAction(ctx, p, es)
 			turnsPlayers -= 1
@@ -54,7 +52,7 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 			s.makeEnemyAction(ctx, e, es)
 			turnsEnemies -= 1
 		default:
-			log.Fatal("must never happen!")
+			s.logger.Panicf("must never happen!")
 		}
 
 		if turnsPlayers == 0 && turnsEnemies == 0 {
@@ -64,14 +62,14 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 	}
 
 	if es.LenAlive() == 0 {
-		s.interactor.Printf("Битва завершена. Все враги повержены!")
+		s.Printf("Битва завершена. Все враги повержены!")
 	} else {
-		s.interactor.Printf("Битва завершена. Все игроки мертвы!")
+		s.Printf("Битва завершена. Все игроки мертвы!")
 	}
 }
 
 func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySquad.EnemySquad) {
-	s.interactor.Printf("Ходит %s.", p.FullName())
+	s.Printf("Ходит %s.", p.FullName())
 
 	if s.makePauseFor(ctx, 5*time.Second) != nil {
 		return
@@ -85,9 +83,9 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 		opts[i] = func() {
 			dmg := e.Damage(p.Attack())
 			if e.Alive() {
-				s.interactor.Printf("%s атакует %s и наносит %d урона.", p.FullName(), e.Name(), dmg)
+				s.Printf("%s атакует %s и наносит %d урона.", p.FullName(), e.Name(), dmg)
 			} else {
-				s.interactor.Printf("%s убивает %s.", p.FullName(), e.Name())
+				s.Printf("%s убивает %s.", p.FullName(), e.Name())
 			}
 		}
 		i++
@@ -96,7 +94,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	optsInfo += fmt.Sprintf("%d) Поставить блок (x0.8DMG)\n", i)
 	opts[i] = func() {
 		p.BlockAttack()
-		s.interactor.Printf("%s ставит блок!", p.FullName())
+		s.Printf("%s ставит блок!", p.FullName())
 	}
 	i++
 	p.ForEachItem(func(item I.Pickable) {
@@ -119,7 +117,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 		}
 	})
 
-	s.interactor.Printf(optsInfo)
+	s.Printf(optsInfo)
 
 	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg I.UserMessage, cancel func()) {
 		opt, err := strconv.Atoi(umsg.Message())
@@ -132,12 +130,12 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	}, 45*time.Second, "Ещё 15 секунд, чтобы сделать выбор!")
 
 	if !canceled {
-		s.interactor.Printf("%s решает пропустить ход!", p.FullName())
+		s.Printf("%s решает пропустить ход!", p.FullName())
 	}
 }
 
 func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad.EnemySquad) {
-	s.interactor.Printf("Ходит %s.", e.Name())
+	s.Printf("Ходит %s.", e.Name())
 	if s.makePauseFor(ctx, 3*time.Second) != nil {
 		return
 	}
@@ -146,12 +144,12 @@ func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad
 	dmg := p.Damage(e.Attack())
 
 	if p.Alive() {
-		s.interactor.Printf("%s атакует %s и наносит %d урона. (HP:%d)", e.Name(), p.FullName(), dmg, p.Health())
+		s.Printf("%s атакует %s и наносит %d урона. (HP:%d)", e.Name(), p.FullName(), dmg, p.Health())
 		if s.makePauseFor(ctx, time.Second) != nil {
 			return
 		}
 	} else {
-		s.interactor.Printf("%s убивает %s!", e.Name(), p.FullName())
+		s.Printf("%s убивает %s!", e.Name(), p.FullName())
 		if s.makePauseFor(ctx, 5*time.Second) != nil {
 			return
 		}

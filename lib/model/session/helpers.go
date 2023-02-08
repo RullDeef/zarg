@@ -2,15 +2,23 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"time"
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/utils"
 )
 
+func (s *Session) Printf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+
+	s.logger.Printf("%s", msg)
+	s.interactor.Printf("%s", msg)
+}
+
 // returns true if was canceled
 func (s *Session) receiveWithAlert(ctx context.Context, d time.Duration, f func(umsg I.UserMessage, cancel func()), alertTime time.Duration, alertMsg string) bool {
 	alarm := utils.AfterFunc(ctx, alertTime, s.pauser, func() {
-		s.interactor.Printf(alertMsg)
+		s.Printf(alertMsg)
 	})
 	defer alarm.Stop()
 	return s.receiveWithTimeout(ctx, d, f)
@@ -32,6 +40,7 @@ func (s *Session) receiveWithTimeout(ctx context.Context, d time.Duration, f fun
 func (s *Session) receivePauseAware(ctx context.Context, f func(I.UserMessage)) error {
 	return s.interactor.Receive(ctx, func(umsg I.UserMessage) {
 		if !s.pauser.IsPaused() {
+			s.logger.Printf("%s: %s", umsg.User().FullName(), umsg.Message())
 			f(umsg)
 		}
 	})

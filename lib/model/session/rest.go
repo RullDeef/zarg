@@ -11,7 +11,7 @@ import (
 func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom) {
 	info := "Вы находите комнату, в которой можно перевести дух и обговорить дальнейшие планы.\n"
 	info += "Голосуйте \"в путь\" за то, чтобы продолжить поход, и \"строй\" за то, чтобы изменить очередность."
-	s.interactor.Printf(info)
+	s.Printf(info)
 
 	if s.makePauseFor(ctx, 2*time.Second) != nil {
 		return
@@ -20,7 +20,7 @@ func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom)
 	s.players.ForEachAlive(func(p I.Player) {
 		p.Heal(50)
 	})
-	s.interactor.Printf("+50HP всем игрокам.")
+	s.Printf("+50HP всем игрокам.")
 
 	continueCounter := 0
 	reorderCounter := 0
@@ -52,7 +52,7 @@ func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom)
 				reordering = true
 				go func(ctx context.Context) {
 					if !s.determinePlayersOrder(ctx) {
-						s.interactor.Printf("Очередность не изменена.")
+						s.Printf("Очередность не изменена.")
 					}
 					reordering = false
 				}(ctx)
@@ -63,6 +63,6 @@ func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom)
 	})
 
 	if ctx.Err() == nil {
-		s.interactor.Printf("Поход продолжается!")
+		s.Printf("Поход продолжается!")
 	}
 }
