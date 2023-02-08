@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 	"time"
-	"zarg/lib/model"
+	"zarg/lib/model/floormaze"
 	I "zarg/lib/model/interfaces"
 )
 
-func (s *Session) exploreRestRoom(ctx context.Context, fm *model.FloorMaze) {
+func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom) {
 	info := "Вы находите комнату, в которой можно перевести дух и обговорить дальнейшие планы.\n"
 	info += "Голосуйте \"в путь\" за то, чтобы продолжить поход, и \"строй\" за то, чтобы изменить очередность."
 	s.interactor.Printf(info)

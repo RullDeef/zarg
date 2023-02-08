@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"zarg/lib/model"
+	"zarg/lib/model/floormaze"
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/model/player"
 	"zarg/lib/model/player/squad"
@@ -80,14 +80,7 @@ func (s *Session) startup(ctx context.Context) {
 	}
 
 	// generate first floor maze
-	floorMaze := model.NewFloorMaze("Подземелье")
-
-	spoiler := "Псс, спойлер:\n"
-	for i := 0; i < floorMaze.RoomsCount(); i++ {
-		spoiler += "-> " + floorMaze.Room(i) + "\n"
-	}
-
-	s.interactor.Printf(spoiler)
+	floorMaze := floormaze.GenFloorMaze("Подземелье")
 	s.explore(ctx, floorMaze)
 }
 
@@ -231,33 +224,25 @@ func (s *Session) determinePlayersOrder(ctx context.Context) bool {
 	return canceled
 }
 
-func (s *Session) explore(ctx context.Context, fm *model.FloorMaze) {
-	if ctx.Err() != nil {
-		return
-	}
-
-	for {
+func (s *Session) explore(ctx context.Context, fm *floormaze.FloorMaze) {
+	for s.players.LenAlive() > 0 {
 		if s.makePauseFor(ctx, 3*time.Second) != nil {
 			return
 		}
 
-		switch fm.NextRoom() {
-		case "enemy":
-			s.exploreEnemiesRoom(ctx, fm)
-		case "treasure":
-			s.exploreTreasureRoom(ctx, fm)
-		case "trap":
-			s.exploreTrapRoom(ctx, fm)
-		case "rest":
-			s.exploreRestRoom(ctx, fm)
-		case "boss":
-			s.exploreBossRoom(ctx, fm)
-			return
-		}
-
-		if s.players.LenAlive() == 0 {
+		room := fm.NextRoom()
+		switch room.(type) {
+		case floormaze.EnemyRoom:
+			s.exploreEnemiesRoom(ctx, room.(*floormaze.EnemyRoom))
+		case floormaze.TrapRoom:
+			s.exploreTrapRoom(ctx, room.(*floormaze.TrapRoom))
+		case floormaze.TreasureRoom:
+			s.exploreTreasureRoom(ctx, room.(*floormaze.TreasureRoom))
+		case floormaze.RestRoom:
+			s.exploreRestRoom(ctx, room.(*floormaze.RestRoom))
+		case floormaze.BossRoom:
+			s.exploreBossRoom(ctx, room.(*floormaze.BossRoom))
 			return
 		}
 	}
-
 }

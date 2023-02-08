@@ -35,7 +35,7 @@ func New(desc string, damageType DamageType, attack int) *Trap {
 	return t
 }
 
-// DamageProducer interface implementation
+// DamageEmitor interface implementation
 func (t *Trap) Name() string {
 	return t.description
 }

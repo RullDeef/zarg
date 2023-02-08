@@ -4,36 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"strconv"
 	"time"
-	"zarg/lib/model"
-	"zarg/lib/model/enemy"
 	enemySquad "zarg/lib/model/enemy/squad"
+	"zarg/lib/model/floormaze"
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/utils"
 )
 
-func (s *Session) exploreEnemiesRoom(ctx context.Context, fm *model.FloorMaze) {
+func (s *Session) exploreEnemiesRoom(ctx context.Context, room *floormaze.EnemyRoom) {
 	s.interactor.Printf("Вы не одни... На вас напали!")
-
-	enemies := enemySquad.New(2+rand.Intn(2), func() I.Enemy {
-		attackMin := 8
-		attackMax := 14
-		attack := attackMin + rand.Intn(attackMax-attackMin+1)
-		crit := attack + 10
-		critChance := 0.05 + 0.05*rand.Float32()
-
-		return enemy.Random(func() I.DamageStats {
-			return I.DamageStats{
-				Base:       attack,
-				Crit:       crit,
-				CritChance: critChance,
-			}
-		})
-	})
-
-	s.PerformBattle(ctx, enemies)
+	s.PerformBattle(ctx, room.Enemies)
 }
 
 func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) {
