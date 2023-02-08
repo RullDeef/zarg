@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 	"zarg/lib/model/floormaze"
@@ -27,8 +26,8 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 			inf += fmt.Sprintf(" %d) %s [x%d] (%s)\n", i+1, x.Name(), x.UsesLeft(), x.Description())
 		} else if x, ok := item.(I.Usable); ok {
 			inf += fmt.Sprintf(" %d) %s (%s)\n", i+1, x.Name(), x.Description())
-		} else if x, ok := item.(I.Pickable); ok {
-			inf += fmt.Sprintf(" %d) %s\n", i+1, x.Name())
+		} else {
+			inf += fmt.Sprintf(" %d) %s\n", i+1, item.Name())
 		}
 	}
 
@@ -66,11 +65,9 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 					}
 				})
 				p.PickItem(x)
-			} else if x, ok := item.(I.Pickable); ok {
-				s.interactor.Printf("%s берёт %s!", p.FullName(), x.Name())
-				p.PickItem(x)
 			} else {
-				log.Panicf("unknown item type: %+v", item)
+				s.interactor.Printf("%s берёт %s!", p.FullName(), item.Name())
+				p.PickItem(item)
 			}
 
 			if len(taken) == len(room.Items) {
