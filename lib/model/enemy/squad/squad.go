@@ -43,13 +43,13 @@ func (es *EnemySquad) ForEachAlive(f func(I.Enemy)) {
 func (es *EnemySquad) CompactInfo() string {
 	res := ""
 
-	for i, node := 1, es.list.Front(); node != nil; i, node = i+1, node.Next() {
+	for node := es.list.Front(); node != nil; node = node.Next() {
 		e := node.Value.(I.Enemy)
 		if e.Alive() {
 			atk := e.Attack()
-			res += fmt.Sprintf("%d) %s (HP:%d, Атака:%d(%d))\n", i, e.Name(), e.Health(), atk.Base, atk.Crit)
+			res += fmt.Sprintf("- %s (%d❤ %d🗡)\n", e.Name(), e.Health(), atk.Base)
 		} else {
-			res += fmt.Sprintf("%d) %s (мертв)\n", i, e.Name())
+			res += fmt.Sprintf("- %s 💀\n", e.Name())
 		}
 	}
 

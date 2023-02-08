@@ -27,7 +27,7 @@ func New(name string, health int, attack func() I.DamageStats) *Enemy {
 
 func Random(attack func() I.DamageStats) *Enemy {
 	name := enemyNames[rand.Intn(len(enemyNames))]
-	health := 20
+	health := 15 + rand.Intn(11)
 
 	return New(name, health, attack)
 }

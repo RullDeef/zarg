@@ -75,7 +75,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	opts := map[int]func(){}
 	i := 1
 	es.ForEachAlive(func(e I.Enemy) {
-		optsInfo += fmt.Sprintf("%d) Атаковать %s (HP: %d)\n", i, e.Name(), e.Health())
+		optsInfo += fmt.Sprintf("%d) Атаковать %s (%d❤)\n", i, e.Name(), e.Health())
 		opts[i] = func() {
 			dmg := e.Damage(p.Attack())
 			if e.Alive() {
@@ -87,7 +87,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 		i++
 	})
 	// add block option
-	optsInfo += fmt.Sprintf("%d) Поставить блок (x0.8DMG)\n", i)
+	optsInfo += fmt.Sprintf("%d) Поставить блок (x0.8🗡)\n", i)
 	opts[i] = func() {
 		p.BlockAttack()
 		s.Printf("%s ставит блок!", p.FullName())
@@ -140,7 +140,7 @@ func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad
 	dmg := p.Damage(e.Attack())
 
 	if p.Alive() {
-		s.Printf("%s атакует %s и наносит %d урона. (HP:%d)", e.Name(), p.FullName(), dmg, p.Health())
+		s.Printf("%s атакует %s и наносит %d урона. (%d❤)", e.Name(), p.FullName(), dmg, p.Health())
 		if s.makePauseFor(ctx, time.Second) != nil {
 			return
 		}
