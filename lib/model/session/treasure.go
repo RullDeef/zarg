@@ -35,6 +35,7 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 	s.Printf(inf)
 
 	taken := make(map[int]int)
+	takenCounter := 0
 
 	s.receiveWithAlert(ctx, 60*time.Second, func(umsg I.UserMessage, cancel func()) {
 		opt, ok := strconv.Atoi(umsg.Message())
@@ -56,6 +57,7 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 			if x, ok := item.(I.Weapon); ok {
 				s.Printf("%s забирает %s!", p.FullName(), x.Name())
 				p.PickWeapon(x)
+				takenCounter++
 			} else if x, ok := item.(*armor.ArmorItem); ok {
 				s.Printf("%s надевает %s!", p.FullName(), x.Name())
 				// drop other armor if has
@@ -65,12 +67,14 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 					}
 				})
 				p.PickItem(x)
+				takenCounter++
 			} else {
 				s.Printf("%s берёт %s!", p.FullName(), item.Name())
 				p.PickItem(item)
+				takenCounter++
 			}
 
-			if len(taken) == len(room.Items) {
+			if takenCounter == len(room.Items) {
 				s.Printf("Все предметы разобрали! Продолжаем дальше!")
 				cancel()
 			}

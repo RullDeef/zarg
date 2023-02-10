@@ -61,7 +61,7 @@ func (hp *HealingPotion) ModifyOutgoingDamage(ds I.DamageStats) I.DamageStats {
 
 // Consumable interface implementation
 func (hp *HealingPotion) Description() string {
-	return fmt.Sprintf("+%dHP", hp.value)
+	return fmt.Sprintf("+%d❤", hp.value)
 }
 
 // Consumable interface implementation

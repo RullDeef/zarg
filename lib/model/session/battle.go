@@ -17,10 +17,10 @@ func (s *Session) exploreEnemiesRoom(ctx context.Context, room *floormaze.EnemyR
 }
 
 func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) {
-
 	// show battle overall info
 	battleInfo := fmt.Sprintf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
 	s.Printf(battleInfo)
+	infoPrintedAtStart := true
 
 	// TODO: make general turn referee
 	turnsMadePlayers := 0
@@ -39,7 +39,10 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 		switch turnGen.Choose().(string) {
 		case "players":
 			// show battle overall info
-			s.Printf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
+			if !infoPrintedAtStart {
+				s.Printf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
+			}
+			infoPrintedAtStart = false
 			p := s.players.ChooseNext()
 			s.makePlayerAction(ctx, p, es)
 			turnsMadePlayers += 1

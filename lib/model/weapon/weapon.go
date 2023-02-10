@@ -89,7 +89,7 @@ func (w *Weapon) ModifyOutgoingDamage(ds I.DamageStats) I.DamageStats {
 
 // Weapon interface implementation
 func (w Weapon) Description() string {
-	return fmt.Sprintf("Атака - %d", w.attack)
+	return fmt.Sprintf("%d🗡", w.attack)
 }
 
 // Weapon interface implementation

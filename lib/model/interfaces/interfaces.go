@@ -66,6 +66,8 @@ type DamageStats struct {
 type Pickable interface {
 	Name() string
 
+	//TODO: move Description() here
+
 	Owner() Player
 	SetOwner(Player)
 
@@ -119,4 +121,23 @@ type Interactor interface {
 
 	// gets a messages from chat.
 	Receive(ctx context.Context, f func(UserMessage)) error
+}
+
+type FloorGenBalancer interface {
+	TreasureRoomsCount() int
+	EnemyRoomsCount() int
+	TrapRoomsCount() int
+
+	ItemsInTreasureRoomCount() int
+
+	EnemyBalancer() EnemyBalancer
+}
+
+type EnemyBalancer interface {
+	EnemiesCount() int
+
+	Health() (min, max int)
+	Attack() (min, max int)
+	ExtraCrit() float32 // percent from attack (> 1.0)
+	CritChance() float32
 }

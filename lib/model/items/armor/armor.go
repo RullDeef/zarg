@@ -42,7 +42,7 @@ func (a ArmorItem) Name() string {
 }
 
 func (a ArmorItem) Description() string {
-	return fmt.Sprintf("Защита - %d", a.defence)
+	return fmt.Sprintf("%d🛡", a.defence)
 }
 
 // Pickable interface implementation

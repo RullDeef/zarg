@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"zarg/lib/model/balancers"
 	"zarg/lib/model/floormaze"
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/model/player"
@@ -82,7 +83,7 @@ func (s *Session) startup(ctx context.Context) {
 	}
 
 	// generate first floor maze
-	floorMaze := floormaze.GenFloorMaze("Подземелье")
+	floorMaze := floormaze.GenFloorMaze("Подземелье", balancers.NewFloorGenBalancer(1, s.players))
 	s.explore(ctx, floorMaze)
 }
 
@@ -153,7 +154,7 @@ func (s *Session) gatherPlayers(ctx context.Context) bool {
 
 func (s *Session) pickWeapons(ctx context.Context) {
 	// generate weapons on start
-	const totalWeapons = 6
+	totalWeapons := 1 + s.players.Len()
 	nChosen := 0 // amount of players that already picked weapon
 
 	weaponShowcase := showcase.NewWeaponShowcase(totalWeapons, func() I.Weapon {

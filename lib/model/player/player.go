@@ -100,6 +100,9 @@ func (p Player) Weapon() I.Weapon {
 
 // Player interface implementation
 func (p *Player) PickWeapon(w I.Weapon) {
+	if p.weapon != nil {
+		p.weapon.SetOwner(nil)
+	}
 	p.weapon = w
 	w.SetOwner(p)
 }
@@ -127,12 +130,14 @@ func (p *Player) IsBlocking() bool {
 // Player interface implementation
 func (p *Player) PickItem(item I.Pickable) {
 	p.items = append(p.items, item)
+	item.SetOwner(p)
 }
 
 // Player interface implementation
 func (p *Player) DropItem(item I.Pickable) {
 	for i, it := range p.items {
 		if it == item {
+			item.SetOwner(nil)
 			p.items = append(p.items[:i], p.items[i+1:]...)
 			return
 		}

@@ -33,7 +33,7 @@ func (s *Session) exploreTrapRoom(ctx context.Context, room *floormaze.TrapRoom)
 			killedNames = append(killedNames, p.FullName())
 		} else {
 			healthBefore := healths[p.ID()]
-			info += fmt.Sprintf("%s (HP:%d->%d)\n", p.FullName(), healthBefore, p.Health())
+			info += fmt.Sprintf("%s (%d->%d❤)\n", p.FullName(), healthBefore, p.Health())
 		}
 	}
 

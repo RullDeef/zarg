@@ -2,6 +2,7 @@ package floormaze
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"zarg/lib/model/enemy"
 	"zarg/lib/model/enemy/boss"
@@ -14,44 +15,54 @@ import (
 	"zarg/lib/utils"
 )
 
-func GenFloorMaze(name string) *FloorMaze {
+func GenFloorMaze(name string, balancer I.FloorGenBalancer) *FloorMaze {
 	var rooms []any
 
-	enemyRoomsCount := 3
-	treasureRoomsCount := 2 + rand.Intn(2)
+	treasureRoomsCount := balancer.TreasureRoomsCount()
+	enemyRoomsCount := balancer.EnemyRoomsCount()
+	trapRoomsCount := balancer.TrapRoomsCount()
 
-	for enemyRoomsCount > 0 || treasureRoomsCount > 0 {
+	for enemyRoomsCount > 0 || treasureRoomsCount > 0 || trapRoomsCount > 0 {
 		pm := utils.NewPropMap()
-		pm.Add("enemy", enemyRoomsCount)
 		pm.Add("treasure", treasureRoomsCount)
+		pm.Add("enemy", enemyRoomsCount)
+		pm.Add("trap", trapRoomsCount)
 
 		switch pm.Choose().(string) {
-		case "enemy":
-			rooms = append(rooms, genEnemyRoom())
-			enemyRoomsCount -= 1
 		case "treasure":
-			if rand.Float32() < 0.5 {
-				rooms = append(rooms, genTrapRoom(), genTreasureRoom())
+			if rand.Float32() < 0.5 && trapRoomsCount > 0 {
+				rooms = append(rooms, genTrapRoom(balancer), genTreasureRoom(balancer))
+				trapRoomsCount -= 1
 			} else {
-				rooms = append(rooms, genEnemyRoom(), genTreasureRoom())
+				rooms = append(rooms, genEnemyRoom(balancer), genTreasureRoom(balancer))
+				enemyRoomsCount -= 1
 			}
 			treasureRoomsCount -= 1
+		case "enemy":
+			rooms = append(rooms, genEnemyRoom(balancer))
+			enemyRoomsCount -= 1
+		case "trap":
+			rooms = append(rooms, genTrapRoom(balancer))
+			trapRoomsCount -= 1
 		}
 	}
 
-	rooms = append(rooms, genRestRoom(), genBossRoom())
+	rooms = append(rooms, genRestRoom(), genBossRoom(balancer))
 	return newFloorMaze(name, rooms)
 }
 
-func genEnemyRoom() *EnemyRoom {
-	enemies := enemySquad.New(2+rand.Intn(2), func() I.Enemy {
-		attackMin := 8
-		attackMax := 14
-		attack := attackMin + rand.Intn(attackMax-attackMin+1)
-		crit := attack + 10
-		critChance := 0.05 + 0.05*rand.Float32()
+func genEnemyRoom(balancer I.FloorGenBalancer) *EnemyRoom {
+	eb := balancer.EnemyBalancer()
 
-		return enemy.Random(func() I.DamageStats {
+	enemies := enemySquad.New(eb.EnemiesCount(), func() I.Enemy {
+		healthMin, healthMax := eb.Health()
+		health := healthMin + rand.Intn(healthMax-healthMin+1)
+		attackMin, attackMax := eb.Attack()
+		attack := attackMin + rand.Intn(attackMax-attackMin+1)
+		crit := int(math.Ceil(float64(attack) * float64(eb.ExtraCrit())))
+		critChance := eb.CritChance()
+
+		return enemy.Random(health, func() I.DamageStats {
 			return I.DamageStats{
 				Base:       attack,
 				Crit:       crit,
@@ -65,7 +76,7 @@ func genEnemyRoom() *EnemyRoom {
 	}
 }
 
-func genTrapRoom() *TrapRoom {
+func genTrapRoom(balancer I.FloorGenBalancer) *TrapRoom {
 	probMap := utils.NewPropMap()
 
 	probMap.Add(trap.New("Гигантская стрела вылетела прямо из стены!", trap.DamageRandom, 15), 4)
@@ -82,27 +93,27 @@ func genTrapRoom() *TrapRoom {
 	}
 }
 
-func genTreasureRoom() *TreasureRoom {
-	probMap := utils.NewPropMap()
-	for i := 0; i < 3; i++ {
-		probMap.Add(weapon.RandomWeapon(10, 4), 1)
+func genTreasureRoom(balancer I.FloorGenBalancer) *TreasureRoom {
+	totalItems := balancer.ItemsInTreasureRoomCount()
+	halfTotal := totalItems/2 + totalItems%2
+
+	items := make([]I.Pickable, 0, 3*halfTotal)
+	for i := 0; i < halfTotal; i++ {
+		items = append(items, weapon.RandomWeapon(10, 4))
 	}
-	for i := 0; i < 3; i++ {
-		probMap.Add(armor.Random(), 1)
+	for i := 0; i < halfTotal; i++ {
+		items = append(items, armor.Random())
 	}
-	for i := 0; i < 3; i++ {
-		probMap.Add(potion.Random(), 1)
+	for i := 0; i < halfTotal; i++ {
+		items = append(items, potion.Random())
 	}
 
-	var items []I.Pickable
-	for i := 0; i < 6; i++ {
-		item := probMap.Choose()
-		items = append(items, item.(I.Pickable))
-		probMap.Add(item, -1)
-	}
+	rand.Shuffle(3*halfTotal, func(i, j int) {
+		items[i], items[j] = items[j], items[i]
+	})
 
 	return &TreasureRoom{
-		Items: items,
+		Items: items[:totalItems],
 	}
 }
 
@@ -110,21 +121,32 @@ func genRestRoom() *RestRoom {
 	return &RestRoom{}
 }
 
-func genBossRoom() *BossRoom {
+func genBossRoom(balancer I.FloorGenBalancer) *BossRoom {
+	eb := balancer.EnemyBalancer()
+
+	healthMin, healthMax := eb.Health()
+	health := healthMin + rand.Intn(healthMax-healthMin+1)
+	health *= 5
+	health = 10 * int(math.Ceil(float64(health)/10.0)) // round up
+
+	attackMin, attackMax := eb.Attack()
+	attackPhase1 := 3*attackMin + 2*rand.Intn(attackMax-attackMin+1)
+	attackPhase2 := attackPhase1 + 3*rand.Intn(attackMax-attackMin+1)
+
 	boss := boss.New(
-		boss.NewPhase("Тролль", 300, func() I.DamageStats {
+		boss.NewPhase("Тролль", int(0.6*float32(health)), func() I.DamageStats {
 			return I.DamageStats{
-				Base:       30,
-				Crit:       60,
+				Base:       attackPhase1,
+				Crit:       int(float32(attackPhase1) * 1.2),
 				CritChance: 0.25,
 			}
 		}, func(bp1, bp2 *boss.BossPhase) {
 			log.Print("TODO: Троль разгневался и стал сильнее!")
 		}),
-		boss.NewPhase("Разъяренный Тролль", 200, func() I.DamageStats {
+		boss.NewPhase("Разъяренный Тролль", int(0.4*float32(health)), func() I.DamageStats {
 			return I.DamageStats{
-				Base:       50,
-				Crit:       80,
+				Base:       attackPhase2,
+				Crit:       int(float32(attackPhase2) * 1.2),
 				CritChance: 0.4,
 			}
 		}, nil),
