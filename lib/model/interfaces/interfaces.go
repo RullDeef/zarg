@@ -65,8 +65,7 @@ type DamageStats struct {
 
 type Pickable interface {
 	Name() string
-
-	//TODO: move Description() here
+	Description() string
 
 	Owner() Player
 	SetOwner(Player)
@@ -78,15 +77,12 @@ type Pickable interface {
 type Usable interface {
 	Pickable
 
-	Description() string
 	Use()
 	IsUsed() bool
 }
 
 type Consumable interface {
 	Pickable
-
-	Description() string
 
 	UsesLeft() int
 	Consume()

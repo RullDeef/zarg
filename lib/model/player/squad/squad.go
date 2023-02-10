@@ -121,7 +121,12 @@ func (pl *PlayerSquad) Info() string {
 			inf += fmt.Sprintf("оружие: %s.\n", p.Weapon().Name())
 			var items []string
 			p.ForEachItem(func(p I.Pickable) {
-				items = append(items, p.Name())
+				switch p := p.(type) {
+				case I.Consumable:
+					items = append(items, fmt.Sprintf("%s [x%d] (%s)", p.Name(), p.UsesLeft(), p.Description()))
+				default:
+					items = append(items, fmt.Sprintf("%s (%s)", p.Name(), p.Description()))
+				}
 			})
 			if len(items) > 0 {
 				inf += fmt.Sprintf("%s.\n\n", strings.Join(items, ", "))

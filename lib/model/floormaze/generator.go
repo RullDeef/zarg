@@ -10,8 +10,8 @@ import (
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/model/items/armor"
 	"zarg/lib/model/items/potion"
+	"zarg/lib/model/items/weapon"
 	"zarg/lib/model/trap"
-	"zarg/lib/model/weapon"
 	"zarg/lib/utils"
 )
 

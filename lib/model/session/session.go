@@ -8,11 +8,11 @@ import (
 	"zarg/lib/model/balancers"
 	"zarg/lib/model/floormaze"
 	I "zarg/lib/model/interfaces"
+	"zarg/lib/model/items/weapon"
+	"zarg/lib/model/items/weapon/showcase"
 	"zarg/lib/model/player"
 	"zarg/lib/model/player/squad"
 	"zarg/lib/model/reorder_referee"
-	"zarg/lib/model/weapon"
-	"zarg/lib/model/weapon/showcase"
 	"zarg/lib/service/logs"
 	"zarg/lib/utils"
 )
