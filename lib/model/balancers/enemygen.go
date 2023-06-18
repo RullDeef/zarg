@@ -27,10 +27,10 @@ func (eb *EnemyBalancer) EnemiesCount() int {
 // EnemyBalancer interface implementation
 func (eb *EnemyBalancer) Health() (min, max int) {
 	power := 0.0
-	eb.players.ForEachAlive(func(player I.Player) {
-		atk := player.Weapon().Attack()
+	eb.players.ForEachAlive(func(player I.Entity) {
+		atk := player.(I.Player).Weapon().AttackStats()
 		// p := float64(atk.CritChance)
-		power += float64(atk.Base) // *(1.0-p) + float64(atk.Crit)*p
+		power += float64(atk.TypedDamages()[I.DamageType1]) // *(1.0-p) + float64(atk.Crit)*p
 	})
 
 	meanPower := power / float64(eb.players.LenAlive())
@@ -48,7 +48,7 @@ func (eb *EnemyBalancer) Attack() (min, max int) {
 	// floor 3: 5-7 attacks to player death
 
 	maxHealth := 50.0
-	eb.players.ForEachAlive(func(player I.Player) {
+	eb.players.ForEachAlive(func(player I.Entity) {
 		maxHealth = math.Max(maxHealth, float64(player.Health()))
 	})
 
@@ -69,28 +69,28 @@ func (eb *EnemyBalancer) Attack() (min, max int) {
 }
 
 // EnemyBalancer interface implementation
-func (eb *EnemyBalancer) ExtraCrit() float32 {
+func (eb *EnemyBalancer) ExtraCrit() float64 {
 	switch eb.floorNumber {
 	case 1:
-		return 1.2
+		return 1.1
 	case 2:
-		return 1.5
+		return 1.3
 	case 3:
-		return 1.8
+		return 1.5
 	default:
 		panic("extra crit for floor under 3 not accounted")
 	}
 }
 
 // EnemyBalancer interface implementation
-func (eb *EnemyBalancer) CritChance() float32 {
+func (eb *EnemyBalancer) CritChance() float64 {
 	switch eb.floorNumber {
 	case 1:
-		return 0.1
+		return 0.05
 	case 2:
-		return 0.1 * float32(1+rand.Intn(2))
+		return 0.05 * float64(1+rand.Intn(2))
 	case 3:
-		return 0.1 * float32(2+rand.Intn(2))
+		return 0.05 * float64(2+rand.Intn(2))
 	default:
 		panic("crit chance for floor under 3 not accounted")
 	}

@@ -1,9 +1,9 @@
 package floormaze
 
 import (
-	"log"
 	"math"
 	"math/rand"
+	"zarg/lib/model/damage"
 	"zarg/lib/model/enemy"
 	"zarg/lib/model/enemy/boss"
 	enemySquad "zarg/lib/model/enemy/squad"
@@ -59,15 +59,11 @@ func genEnemyRoom(balancer I.FloorGenBalancer) *EnemyRoom {
 		health := healthMin + rand.Intn(healthMax-healthMin+1)
 		attackMin, attackMax := eb.Attack()
 		attack := attackMin + rand.Intn(attackMax-attackMin+1)
-		crit := int(math.Ceil(float64(attack) * float64(eb.ExtraCrit())))
-		critChance := eb.CritChance()
 
 		return enemy.Random(health, func() I.DamageStats {
-			return I.DamageStats{
-				Base:       attack,
-				Crit:       crit,
-				CritChance: critChance,
-			}
+			typedDamages := make(map[I.DamageType]int)
+			typedDamages[I.DamageType1] = attack
+			return damage.NewStats(typedDamages, eb.CritChance(), eb.ExtraCrit())
 		})
 	})
 
@@ -135,20 +131,18 @@ func genBossRoom(balancer I.FloorGenBalancer) *BossRoom {
 
 	boss := boss.New(
 		boss.NewPhase("Тролль", int(0.6*float32(health)), func() I.DamageStats {
-			return I.DamageStats{
-				Base:       attackPhase1,
-				Crit:       int(float32(attackPhase1) * 1.2),
-				CritChance: 0.25,
-			}
-		}, func(bp1, bp2 *boss.BossPhase) {
-			log.Print("TODO: Троль разгневался и стал сильнее!")
+			typedDamages := make(map[I.DamageType]int)
+			typedDamages[I.DamageType1] = attackPhase1
+
+			return damage.NewStats(typedDamages, 0.25, 1.2)
+		}, func(bp1, bp2 *boss.BossPhase, interactor I.Interactor) {
+			interactor.Printf("Троль разгневался и стал сильнее!")
 		}),
 		boss.NewPhase("Разъяренный Тролль", int(0.4*float32(health)), func() I.DamageStats {
-			return I.DamageStats{
-				Base:       attackPhase2,
-				Crit:       int(float32(attackPhase2) * 1.2),
-				CritChance: 0.4,
-			}
+			typedDamages := make(map[I.DamageType]int)
+			typedDamages[I.DamageType1] = attackPhase2
+
+			return damage.NewStats(typedDamages, 0.4, 1.2)
 		}, nil),
 	)
 

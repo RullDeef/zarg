@@ -9,7 +9,7 @@ import (
 type HealingPotion struct {
 	name     string
 	value    int
-	owner    I.Player
+	owner    I.Entity
 	usesLeft int
 }
 
@@ -40,23 +40,23 @@ func (hp *HealingPotion) Name() string {
 }
 
 // Pickable interface implementation
-func (hp *HealingPotion) Owner() I.Player {
+func (hp *HealingPotion) Owner() I.Entity {
 	return hp.owner
 }
 
 // Pickable interface implementation
-func (hp *HealingPotion) SetOwner(p I.Player) {
+func (hp *HealingPotion) SetOwner(p I.Entity) {
 	hp.owner = p
 }
 
 // Pickable interface implementation
-func (hp *HealingPotion) ModifyOngoingDamage(ds I.DamageStats) I.DamageStats {
-	return ds
+func (hp *HealingPotion) ModifyOngoingDamage(dmg I.Damage) I.Damage {
+	return dmg
 }
 
 // Pickable interface implementation
-func (hp *HealingPotion) ModifyOutgoingDamage(ds I.DamageStats) I.DamageStats {
-	return ds
+func (hp *HealingPotion) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
+	return dmg
 }
 
 // Consumable interface implementation

@@ -14,9 +14,40 @@ type Entity interface {
 
 	Health() int
 	Heal(value int)
-	// returns actual damage taken
-	Damage(DamageStats) int
 	Alive() bool
+
+	// returns actual damage taken
+	Damage(dmg Damage) int
+
+	AttackStats() DamageStats
+
+	// controllable crits
+	Attack(rand float64) Damage
+
+	// pickup management
+
+	CanPickItem(Pickable) bool
+	CanDropItem(Pickable) bool
+	PickItem(Pickable)
+	DropItem(Pickable)
+
+	ForEachItem(func(Pickable))
+	ItemsCount() int
+
+	// special action informing
+	BeforeStartFight(interactor Interactor, friends EntityList, enemies EntityList)
+	AfterEndFight(interactor Interactor, friends EntityList, enemies EntityList)
+	BeforeDeath(Interactor Interactor, friends EntityList, enemies EntityList)
+}
+
+type EntityList interface {
+	Len() int
+	LenAlive() int
+
+	ForEach(func(Entity))
+	ForEachAlive(func(Entity))
+
+	Has(Entity) bool
 }
 
 type Player interface {
@@ -26,52 +57,89 @@ type Player interface {
 	Weapon() Weapon
 	PickWeapon(Weapon)
 
-	Attack() DamageStats
-
 	BlockAttack()
+	StopBlocking()
 	IsBlocking() bool
-
-	PickItem(Pickable)
-	DropItem(Pickable)
-	ForEachItem(func(Pickable))
 }
 
-type PlayerList interface {
-	Len() int
-	LenAlive() int
+// type PlayerList interface {
+// 	Len() int
+// 	LenAlive() int
 
-	ForEach(func(Player))
-	ForEachAlive(func(Player))
-}
+// 	ForEach(func(Player))
+// 	ForEachAlive(func(Player))
+// }
+
+// weapon types
+const (
+	WeaponTypeSlicing  = "режущее"
+	WeaponTypeStabbing = "колющее"
+	WeaponTypeCrushing = "дробящее"
+	WeaponTypeMagical  = "магическое"
+	WeaponTypeSpecial  = "особое"
+)
 
 type Weapon interface {
 	Pickable
 
+	Kind() string
+	AttackStats() DamageStats
+}
+
+// type DamageStats struct {
+// 	Base       int
+// 	Crit       int
+// 	CritChance float32
+// }
+
+type DamageType int
+
+const (
+	DamageType1 DamageType = iota
+	DamageType2
+	DamageType3
+	DamageType4
+)
+
+type DamageStats interface {
+	// returns mapping from damage type to damage value
+	TypedDamages() map[DamageType]int
+
+	CritChance() float64
+	CritFactor() float64 // > 1
+}
+
+type Damage interface {
+	DamageStats
+
+	IsCrit() bool
+}
+
+type StatusEffect interface {
+	Name() string
 	Description() string
 
-	Attack() DamageStats
-}
+	// for now it just returns amount of turns left
+	TimeLeft() int // TODO: add custom ~ActionTime struct
 
-type DamageEmitor interface {
-	Name() string
-}
+	BeforeAnyTurn()
+	BeforeFriendlyTurn()
+	BeforeMyTurn()
 
-type DamageStats struct {
-	Producer   DamageEmitor
-	Base       int
-	Crit       int
-	CritChance float32
+	AfterMyTurn()
+	AfterFriendlyTurn()
+	AfterAnyTurn()
 }
 
 type Pickable interface {
 	Name() string
 	Description() string
 
-	Owner() Player
-	SetOwner(Player)
+	Owner() Entity
+	SetOwner(Entity)
 
-	ModifyOngoingDamage(DamageStats) DamageStats
-	ModifyOutgoingDamage(DamageStats) DamageStats
+	ModifyOngoingDamage(Damage) Damage
+	ModifyOutgoingDamage(Damage) Damage
 }
 
 type Usable interface {
@@ -90,8 +158,6 @@ type Consumable interface {
 
 type Enemy interface {
 	Entity
-
-	Attack() DamageStats
 }
 
 type WeaponShowcase interface {
@@ -134,6 +200,11 @@ type EnemyBalancer interface {
 
 	Health() (min, max int)
 	Attack() (min, max int)
-	ExtraCrit() float32 // percent from attack (> 1.0)
-	CritChance() float32
+	ExtraCrit() float64 // percent from attack (> 1.0)
+	CritChance() float64
+}
+
+type FightManager interface {
+	// returns 1, if sqiad1 wins, 2 if squad2 wins, 0 - draw
+	PerformFight(squad1, squad2 EntityList) int
 }

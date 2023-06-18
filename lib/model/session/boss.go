@@ -11,6 +11,8 @@ func (s *Session) exploreBossRoom(ctx context.Context, room *floormaze.BossRoom)
 	s.Printf("Вы находите просторную комнату, заваленную драгоценностями. Внезапно пол содрагается...")
 	s.Printf("Перед вами появляется %s!", room.Boss.Name())
 
-	es := squad.New(1, func() I.Enemy { return room.Boss })
+	es := squad.New(1, func() I.Enemy {
+		return room.Boss
+	})
 	s.PerformBattle(ctx, es)
 }

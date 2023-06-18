@@ -1,4 +1,4 @@
-package squad
+package damage
 
 import (
 	"testing"
@@ -6,5 +6,6 @@ import (
 )
 
 func TestInterfaces(t *testing.T) {
-	var _ I.PlayerList = &PlayerSquad{}
+	var _ I.DamageStats = &BaseDamageStats{}
+	var _ I.Damage = &BaseDamage{}
 }

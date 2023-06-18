@@ -6,32 +6,38 @@ import (
 	"zarg/lib/model/player/squad"
 )
 
-type DamageType int
-
 const (
-	DamageEveryone = DamageType(iota)
-	DamageRandom   = DamageType(iota)
-	DamageFirst    = DamageType(iota)
+	DamageEveryone = I.DamageType(iota)
+	DamageRandom   = I.DamageType(iota)
+	DamageFirst    = I.DamageType(iota)
 )
 
 type Trap struct {
 	description string
-	damageType  DamageType
+	damageType  I.DamageType
 	attack      I.DamageStats
 }
 
-func New(desc string, damageType DamageType, attack int) *Trap {
+type TrapAttack struct {
+	typedDamages map[I.DamageType]int
+
+	critChance float64
+	critFactor float64
+	isCrit     bool
+}
+
+func New(desc string, damageType I.DamageType, attack int) *Trap {
 	t := &Trap{
 		description: desc,
 		damageType:  damageType,
-		attack: I.DamageStats{
-			Base:       attack,
-			Crit:       attack,
-			CritChance: 0.0,
+		attack: &TrapAttack{
+			typedDamages: map[I.DamageType]int{
+				damageType: attack,
+			},
+			critChance: 0.5,
+			critFactor: 1.2,
 		},
 	}
-
-	t.attack.Producer = t
 	return t
 }
 
@@ -61,23 +67,39 @@ func (t *Trap) Activate(pl *squad.PlayerSquad) []I.Player {
 
 func (t *Trap) damageFirst(pl *squad.PlayerSquad) []I.Player {
 	p := pl.ChooseFirstAlive()
-	p.Damage(t.attack)
+	p.Damage(t.attack.(*TrapAttack))
 	return append(make([]I.Player, 0, 1), p)
 }
 
 func (t *Trap) damageRandom(pl *squad.PlayerSquad) []I.Player {
 	p := pl.ChooseRandomAlive()
-	p.Damage(t.attack)
+	p.Damage(t.attack.(*TrapAttack))
 	return append(make([]I.Player, 0, 1), p)
 }
 
 func (t *Trap) damageEveryone(pl *squad.PlayerSquad) []I.Player {
 	var res []I.Player
 
-	pl.ForEachAlive(func(p I.Player) {
-		p.Damage(t.attack)
-		res = append(res, p)
+	pl.ForEachAlive(func(p I.Entity) {
+		p.Damage(t.attack.(*TrapAttack))
+		res = append(res, p.(I.Player))
 	})
 
 	return res
+}
+
+func (t *TrapAttack) TypedDamages() map[I.DamageType]int {
+	return t.typedDamages
+}
+
+func (t *TrapAttack) CritChance() float64 {
+	return t.critChance
+}
+
+func (t *TrapAttack) CritFactor() float64 {
+	return t.critFactor
+}
+
+func (t *TrapAttack) IsCrit() bool {
+	return t.isCrit
 }

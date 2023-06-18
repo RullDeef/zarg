@@ -20,12 +20,12 @@ func NewPlayerSquad() *PlayerSquad {
 	}
 }
 
-// PlayerList interface implementation
+// EntityList interface implementation
 func (pl PlayerSquad) Len() int {
 	return pl.list.Len()
 }
 
-// PlayerList interface implementation
+// EntityList interface implementation
 func (pl PlayerSquad) LenAlive() int {
 	res := 0
 
@@ -39,21 +39,31 @@ func (pl PlayerSquad) LenAlive() int {
 	return res
 }
 
-// PlayerList interface implementation
-func (pl *PlayerSquad) ForEach(f func(I.Player)) {
+// EntityList interface implementation
+func (pl *PlayerSquad) ForEach(f func(I.Entity)) {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		f(node.Value.(I.Player))
 	}
 }
 
 // PlayerList interface implementation
-func (pl *PlayerSquad) ForEachAlive(f func(I.Player)) {
+func (pl *PlayerSquad) ForEachAlive(f func(I.Entity)) {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
 			f(p)
 		}
 	}
+}
+
+func (es *PlayerSquad) Has(player I.Entity) bool {
+	for node := es.list.Front(); node != nil; node = node.Next() {
+		p := node.Value.(I.Entity)
+		if p == player {
+			return true
+		}
+	}
+	return false
 }
 
 func (pl *PlayerSquad) Add(p I.Player) {
@@ -98,8 +108,8 @@ func (pl *PlayerSquad) SetOrdering(order []int) {
 
 func (pl *PlayerSquad) OrderingString() string {
 	ordering := make([]string, 0, pl.LenAlive())
-	pl.ForEachAlive(func(p I.Player) {
-		ordering = append(ordering, p.FullName())
+	pl.ForEachAlive(func(p I.Entity) {
+		ordering = append(ordering, p.(I.Player).FullName())
 	})
 	return strings.Join(ordering, " -> ")
 }
@@ -117,7 +127,7 @@ func (pl *PlayerSquad) Info() string {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
-			inf += fmt.Sprintf("%s (%d❤ %d🗡)\n", p.FullName(), p.Health(), p.Attack().Base)
+			inf += fmt.Sprintf("%s (%d❤ %d🗡)\n", p.FullName(), p.Health(), p.AttackStats().TypedDamages()[I.DamageType1])
 			inf += fmt.Sprintf("оружие: %s.\n", p.Weapon().Name())
 			var items []string
 			p.ForEachItem(func(p I.Pickable) {
@@ -145,7 +155,7 @@ func (pl *PlayerSquad) CompactInfo() string {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
-			inf += fmt.Sprintf("- %s (%d❤)\n", p.FullName(), p.Health())
+			inf += fmt.Sprintf("- %s (%d❤ %d🗡)\n", p.FullName(), p.Health(), p.AttackStats().TypedDamages()[I.DamageType1])
 		} else {
 			inf += fmt.Sprintf("- %s 💀\n", p.FullName())
 		}

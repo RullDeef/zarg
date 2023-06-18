@@ -1,48 +1,31 @@
 package boss
 
 import (
-	"math/rand"
+	"zarg/lib/model/entity"
 	I "zarg/lib/model/interfaces"
 )
 
 type BossPhase struct {
-	name          string
-	health        int
-	maxHealth     int
-	atack         func() I.DamageStats
+	entity.BaseEntity
+	// attack        func() I.DamageStats
 	nextPhase     *BossPhase
-	onPhaseSwitch func(currPhase, nextPhase *BossPhase)
+	onPhaseSwitch func(currPhase, nextPhase *BossPhase, interactor I.Interactor)
 }
 
-func NewPhase(name string, health int, atack func() I.DamageStats, phaseSwitch func(*BossPhase, *BossPhase)) *BossPhase {
+func NewPhase(name string, health int, attack func() I.DamageStats, phaseSwitch func(*BossPhase, *BossPhase, I.Interactor)) *BossPhase {
 	return &BossPhase{
-		name:          name,
-		health:        health,
-		maxHealth:     health,
-		atack:         atack,
+		BaseEntity: entity.NewBase(name, health, attack),
+		// attack:        attack,
 		onPhaseSwitch: phaseSwitch,
 	}
 }
 
-func (bf *BossPhase) Heal(value int) {
-	bf.health += value
-	if bf.health > bf.maxHealth {
-		bf.health = bf.maxHealth
-	}
-}
+func (bf *BossPhase) Damage(dmg I.Damage, interactor I.Interactor) (int, *BossPhase) {
+	res := bf.BaseEntity.Damage(dmg)
 
-func (bf *BossPhase) Damage(ds I.DamageStats) (int, *BossPhase) {
-	res := ds.Base
-	if rand.Float32() < ds.CritChance {
-		res = ds.Crit
-	}
-	bf.health -= res
-	if bf.health < 0 {
-		bf.health = 0
-		if bf.nextPhase != nil {
-			bf.onPhaseSwitch(bf, bf.nextPhase)
-			bf = bf.nextPhase
-		}
+	if !bf.Alive() && bf.nextPhase != nil {
+		bf.onPhaseSwitch(bf, bf.nextPhase, interactor)
+		bf = bf.nextPhase
 	}
 	return res, bf
 }

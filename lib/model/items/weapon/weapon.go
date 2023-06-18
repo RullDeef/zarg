@@ -2,18 +2,25 @@ package weapon
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
+	"zarg/lib/model/damage"
 	I "zarg/lib/model/interfaces"
 )
 
 type WeaponKind int
 
+const (
+	defaultCritFactor = 1.2
+	fistsBaseAttack   = 5
+)
+
 type Weapon struct {
-	name   string
-	attack int
-	Kind   WeaponKind
-	owner  I.Player
+	name         string
+	typedDamages map[I.DamageType]int
+	critChance   float64
+	critFactor   float64
+	kind         WeaponKind
+	owner        I.Entity
 }
 
 var (
@@ -33,12 +40,17 @@ var (
 	}
 )
 
-func FistsWeapon(attackMean, attackDiff int) *Weapon {
+func FistsWeapon() *Weapon {
+	typedDamages := make(map[I.DamageType]int)
+	typedDamages[I.DamageType1] = fistsBaseAttack
+
 	return &Weapon{
-		name:   "Кулаки",
-		attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
-		Kind:   4,
-		owner:  nil,
+		name:         "Кулаки",
+		typedDamages: typedDamages,
+		critChance:   0.05,
+		critFactor:   2.0,
+		kind:         4,
+		owner:        nil,
 	}
 }
 
@@ -46,11 +58,16 @@ func RandomWeapon(attackMean, attackDiff int) *Weapon {
 	kind := WeaponKind(rand.Int() % len(weaponKinds))
 	name := weaponNames[kind][rand.Int()%len(weaponNames[kind])]
 
+	typedDamages := make(map[I.DamageType]int)
+	typedDamages[I.DamageType1] = attackMean - attackDiff + rand.Intn(2*attackDiff+1)
+
 	return &Weapon{
-		name:   name,
-		attack: attackMean - attackDiff + 2*rand.Int()%(attackDiff+1),
-		Kind:   kind,
-		owner:  nil,
+		name:         name,
+		typedDamages: typedDamages,
+		critChance:   0.1,
+		critFactor:   defaultCritFactor,
+		kind:         kind,
+		owner:        nil,
 	}
 }
 
@@ -68,40 +85,36 @@ func (w *Weapon) Name() string {
 }
 
 // Pickable interface implementation
-func (w *Weapon) Owner() I.Player {
+func (w Weapon) Description() string {
+	return fmt.Sprintf("%d🗡", w.typedDamages[I.DamageType1])
+}
+
+// Pickable interface implementation
+func (w *Weapon) Owner() I.Entity {
 	return w.owner
 }
 
 // Pickable interface implementation
-func (w *Weapon) SetOwner(player I.Player) {
-	w.owner = player
+func (w *Weapon) SetOwner(entity I.Entity) {
+	w.owner = entity
 }
 
 // Pickable interface implementation
-func (w *Weapon) ModifyOngoingDamage(ds I.DamageStats) I.DamageStats {
-	return ds
+func (w *Weapon) ModifyOngoingDamage(dmg I.Damage) I.Damage {
+	return dmg
 }
 
 // Pickable interface implementation
-func (w *Weapon) ModifyOutgoingDamage(ds I.DamageStats) I.DamageStats {
-	return ds
+func (w *Weapon) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
+	return dmg
 }
 
 // Weapon interface implementation
-func (w Weapon) Description() string {
-	return fmt.Sprintf("%d🗡", w.attack)
+func (w Weapon) AttackStats() I.DamageStats {
+	return damage.NewStats(w.typedDamages, w.critChance, w.critFactor)
 }
 
 // Weapon interface implementation
-func (w Weapon) Attack() I.DamageStats {
-	if w.owner == nil {
-		log.Panicf("owner for weapon %+v is not set!", w)
-	}
-
-	return I.DamageStats{
-		Producer:   w.owner,
-		Base:       w.attack,
-		Crit:       w.attack + 10,
-		CritChance: 0.07,
-	}
+func (w Weapon) Kind() string {
+	return weaponKinds[w.kind]
 }

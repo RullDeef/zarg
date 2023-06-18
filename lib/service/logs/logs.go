@@ -2,25 +2,18 @@ package logs
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"strings"
-	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 const LOGS_DIR = "./logs"
 
-type Logger struct {
-	file      *os.File
-	AndStdout bool
-	lock      sync.Mutex
-}
-
-func New() *Logger {
+func New() *logrus.Logger {
 	filename := fmt.Sprintf("%s/%s.log", LOGS_DIR, time.Now().Format("2006-01-02_15-04-05"))
-	log.Print(filename)
-
 	if err := os.MkdirAll(LOGS_DIR, os.ModePerm); err != nil {
 		log.Panic(err)
 	}
@@ -30,39 +23,7 @@ func New() *Logger {
 		log.Panic(err)
 	}
 
-	return &Logger{
-		file:      file,
-		AndStdout: true,
-		lock:      sync.Mutex{},
-	}
-}
-
-func (l *Logger) Close() {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	l.file.Close()
-}
-
-func (l *Logger) Printf(format string, args ...any) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintf(l.file, "%s: %s\n", time.Now().Format(time.StampMilli), strings.TrimRight(msg, "\n"))
-	if l.AndStdout {
-		log.Print(msg)
-	}
-}
-
-func (l *Logger) Panicf(format string, args ...any) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	msg := fmt.Sprintf(format, args...)
-	fmt.Print(l.file, msg)
-	if l.AndStdout {
-		log.Print(msg)
-	}
-	panic(msg)
+	logger := logrus.New()
+	logger.Out = io.MultiWriter(os.Stdout, file)
+	return logger
 }

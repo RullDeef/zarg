@@ -25,13 +25,17 @@ func New(n int, builder func() I.Enemy) *EnemySquad {
 	}
 }
 
-func (es *EnemySquad) ForEach(f func(I.Enemy)) {
+func (es *EnemySquad) Len() int {
+	return es.list.Len()
+}
+
+func (es *EnemySquad) ForEach(f func(I.Entity)) {
 	for node := es.list.Front(); node != nil; node = node.Next() {
 		f(node.Value.(I.Enemy))
 	}
 }
 
-func (es *EnemySquad) ForEachAlive(f func(I.Enemy)) {
+func (es *EnemySquad) ForEachAlive(f func(I.Entity)) {
 	for node := es.list.Front(); node != nil; node = node.Next() {
 		e := node.Value.(I.Enemy)
 		if e.Alive() {
@@ -40,14 +44,24 @@ func (es *EnemySquad) ForEachAlive(f func(I.Enemy)) {
 	}
 }
 
+func (es *EnemySquad) Has(enemy I.Entity) bool {
+	for node := es.list.Front(); node != nil; node = node.Next() {
+		e := node.Value.(I.Entity)
+		if e == enemy {
+			return true
+		}
+	}
+	return false
+}
+
 func (es *EnemySquad) CompactInfo() string {
 	res := ""
 
 	for node := es.list.Front(); node != nil; node = node.Next() {
 		e := node.Value.(I.Enemy)
 		if e.Alive() {
-			atk := e.Attack()
-			res += fmt.Sprintf("- %s (%d❤ %d🗡)\n", e.Name(), e.Health(), atk.Base)
+			atk := e.AttackStats()
+			res += fmt.Sprintf("- %s (%d❤ %d🗡)\n", e.Name(), e.Health(), atk.TypedDamages()[I.DamageType1])
 		} else {
 			res += fmt.Sprintf("- %s 💀\n", e.Name())
 		}

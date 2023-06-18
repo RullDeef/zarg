@@ -1,29 +1,33 @@
 package player
 
 import (
-	"log"
-	"math/rand"
+	"zarg/lib/model/entity"
 	I "zarg/lib/model/interfaces"
 )
 
-const maxHealth = 100
+const (
+	maxHealth      = 100
+	blockingFactor = 0.8
+)
 
 type Player struct {
+	entity.BaseEntity
 	user       I.User
-	health     int
 	weapon     I.Weapon
-	items      []I.Pickable
 	isBlocking bool
 }
 
 func NewPlayer(user I.User) *Player {
-	return &Player{
+	var p *Player
+	p = &Player{
+		BaseEntity: entity.NewBase(user.FullName(), maxHealth, func() I.DamageStats {
+			return p.AttackStats()
+		}),
 		user:       user,
-		health:     maxHealth,
 		weapon:     nil,
-		items:      nil,
 		isBlocking: false,
 	}
+	return p
 }
 
 // User interface implementation
@@ -47,50 +51,20 @@ func (p Player) FullName() string {
 }
 
 // Entity interface implementation
-func (p Player) Name() string {
-	return p.user.FullName()
-}
+func (p *Player) Damage(dmg I.Damage) int {
+	p.ForEachItem(func(item I.Pickable) {
+		dmg = item.ModifyOngoingDamage(dmg)
+	})
 
-// Entity interface implementation
-func (p Player) Health() int {
-	return p.health
-}
+	totalDmg := p.CalcTotalDmg(dmg)
 
-// Entity interface implementation
-func (p *Player) Heal(value int) {
-	p.health += value
-	if p.health > maxHealth {
-		p.health = maxHealth
-	}
-}
-
-// Entity interface implementation
-func (p *Player) Damage(dmg I.DamageStats) int {
-	for _, it := range p.items {
-		dmg = it.ModifyOngoingDamage(dmg)
-	}
-
-	val := dmg.Base
-	if rand.Float32() < dmg.CritChance {
-		val = dmg.Crit
-	}
-
-	// if is blocking - reduce to 80%
 	if p.isBlocking {
-		val = int(0.8 * float32(val))
-		p.isBlocking = false
+		totalDmg = int(blockingFactor * float64(totalDmg))
 	}
 
-	p.health -= val
-	if p.health < 0 {
-		p.health = 0
-	}
-	return val
-}
-
-// Entity interface implementation
-func (p Player) Alive() bool {
-	return p.health > 0
+	// apply merged damage
+	p.ApplyPureDamage(totalDmg)
+	return totalDmg
 }
 
 // Player interface implementation
@@ -108,13 +82,8 @@ func (p *Player) PickWeapon(w I.Weapon) {
 }
 
 // Player interface implementation
-func (p *Player) Attack() I.DamageStats {
-	dmg := p.weapon.Attack()
-	for _, it := range p.items {
-		dmg = it.ModifyOutgoingDamage(dmg)
-	}
-	p.isBlocking = false
-	return dmg
+func (p *Player) AttackStats() I.DamageStats {
+	return p.weapon.AttackStats()
 }
 
 // Player interface implementation
@@ -123,31 +92,23 @@ func (p *Player) BlockAttack() {
 }
 
 // Player interface implementation
+func (p *Player) StopBlocking() {
+	p.isBlocking = false
+}
+
+// Player interface implementation
 func (p *Player) IsBlocking() bool {
 	return p.isBlocking
 }
 
-// Player interface implementation
-func (p *Player) PickItem(item I.Pickable) {
-	p.items = append(p.items, item)
-	item.SetOwner(p)
+func (p *Player) BeforeStartFight(interactor I.Interactor, friends I.EntityList, enemies I.EntityList) {
+
 }
 
-// Player interface implementation
-func (p *Player) DropItem(item I.Pickable) {
-	for i, it := range p.items {
-		if it == item {
-			item.SetOwner(nil)
-			p.items = append(p.items[:i], p.items[i+1:]...)
-			return
-		}
-	}
-	log.Panicf("no such item (%+v) with player (%+v)", item, p)
+func (p *Player) AfterEndFight(interactor I.Interactor, friends I.EntityList, enemies I.EntityList) {
+
 }
 
-// Player interface implementation
-func (p *Player) ForEachItem(f func(I.Pickable)) {
-	for _, item := range p.items {
-		f(item)
-	}
+func (p *Player) BeforeDeath(Interactor I.Interactor, friends I.EntityList, enemies I.EntityList) {
+
 }

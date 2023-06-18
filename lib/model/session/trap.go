@@ -21,8 +21,8 @@ func (s *Session) exploreTrapRoom(ctx context.Context, room *floormaze.TrapRoom)
 	}
 
 	healths := make(map[int]int)
-	s.players.ForEachAlive(func(p I.Player) {
-		healths[p.ID()] = p.Health()
+	s.players.ForEachAlive(func(p I.Entity) {
+		healths[p.(I.Player).ID()] = p.Health()
 	})
 	damaged := room.Trap.Activate(s.players)
 	info := ""

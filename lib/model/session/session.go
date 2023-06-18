@@ -15,10 +15,12 @@ import (
 	"zarg/lib/model/reorder_referee"
 	"zarg/lib/service/logs"
 	"zarg/lib/utils"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Session struct {
-	logger     *logs.Logger
+	logger     *logrus.Logger
 	interactor I.Interactor
 	players    *squad.PlayerSquad
 	onDone     func()
@@ -52,8 +54,9 @@ func (s *Session) startup(ctx context.Context) {
 	defer s.shutdown()
 	defer func() {
 		if err := recover(); err != nil {
-			s.logger.Printf("recovered from panic: %s", err)
+			s.logger.Error("recovered from panic: %w", err)
 			s.Printf("К сожалению, произошли непредвиденные обстоятельства, и подземелье завалило. Больше героев никто не видел...")
+			panic(err)
 		}
 	}()
 
@@ -97,7 +100,6 @@ func (s *Session) shutdown() {
 		s.cancelFunc = nil
 	}
 	s.Printf("Игровая сессия завершена.")
-	s.logger.Close()
 	s.onDone()
 }
 
@@ -141,10 +143,11 @@ func (s *Session) gatherPlayers(ctx context.Context) bool {
 	if s.players.Len() == 0 {
 		s.Printf("Cбор окончен! В поход не идёт никто.")
 		return false
-	} else if s.players.Len() == 1 {
-		s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
-		return false
 	}
+	// else if s.players.Len() == 1 {
+	// 	s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
+	// 	return false
+	// }
 
 	res := "Сбор окончен! В поход собрались:\n"
 	res += s.players.ListString()
@@ -199,9 +202,9 @@ func (s *Session) pickWeapons(ctx context.Context) {
 	if !canceled {
 		weaponShowcase.ConfirmPick()
 		s.Printf("Выдвигаемся! А кто не успел схватиться за оружие будет сражаться кулаками!")
-		s.players.ForEach(func(p I.Player) {
-			if p.Weapon() == nil {
-				p.PickWeapon(weapon.FistsWeapon(5, 1))
+		s.players.ForEach(func(p I.Entity) {
+			if p.(I.Player).Weapon() == nil {
+				p.(I.Player).PickWeapon(weapon.FistsWeapon())
 			}
 		})
 	}

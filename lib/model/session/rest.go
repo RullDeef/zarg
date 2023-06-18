@@ -17,7 +17,7 @@ func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom)
 		return
 	}
 
-	s.players.ForEachAlive(func(p I.Player) {
+	s.players.ForEachAlive(func(p I.Entity) {
 		p.Heal(50)
 	})
 	s.Printf("+50HP всем игрокам.")

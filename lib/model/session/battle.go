@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"time"
 	enemySquad "zarg/lib/model/enemy/squad"
@@ -25,6 +26,14 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 	// TODO: make general turn referee
 	turnsMadePlayers := 0
 	turnsMadeEnemies := 0
+
+	// make special actions before battle
+	s.players.ForEachAlive(func(p I.Entity) {
+		p.BeforeStartFight(s.interactor, s.players, es)
+	})
+	es.ForEachAlive(func(e I.Entity) {
+		e.BeforeStartFight(s.interactor, es, s.players)
+	})
 
 	for es.LenAlive() > 0 && s.players.LenAlive() > 0 {
 		if s.makePauseFor(ctx, time.Second) != nil {
@@ -61,8 +70,14 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 	}
 
 	if es.LenAlive() == 0 {
+		s.players.ForEachAlive(func(p I.Entity) {
+			p.AfterEndFight(s.interactor, s.players, es)
+		})
 		s.Printf("Битва завершена. Все враги повержены!")
 	} else {
+		es.ForEachAlive(func(e I.Entity) {
+			e.AfterEndFight(s.interactor, es, s.players)
+		})
 		s.Printf("Битва завершена. Все игроки мертвы!")
 	}
 }
@@ -77,12 +92,17 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	optsInfo := "Варианты действия:\n"
 	opts := map[int]func(){}
 	i := 1
-	es.ForEachAlive(func(e I.Enemy) {
+	es.ForEachAlive(func(e I.Entity) {
 		optsInfo += fmt.Sprintf("%d) Атаковать %s (%d❤)\n", i, e.Name(), e.Health())
 		opts[i] = func() {
-			dmg := e.Damage(p.Attack())
+			dmgObj := p.Attack(rand.Float64())
+			dmg := e.Damage(dmgObj)
 			if e.Alive() {
-				s.Printf("%s атакует %s и наносит %d урона.", p.FullName(), e.Name(), dmg)
+				if dmgObj.IsCrit() {
+					s.Printf("%s атакует %s и наносит %d крит урона! (x%.1f)", p.FullName(), e.Name(), dmg, dmgObj.CritFactor())
+				} else {
+					s.Printf("%s атакует %s и наносит %d урона.", p.FullName(), e.Name(), dmg)
+				}
 			} else {
 				s.Printf("%s убивает %s.", p.FullName(), e.Name())
 			}
@@ -140,10 +160,15 @@ func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad
 	}
 
 	p := s.players.ChooseRandomAlivePreferBlocking()
-	dmg := p.Damage(e.Attack())
+	dmgObj := e.Attack(rand.Float64())
+	dmg := p.Damage(dmgObj)
 
 	if p.Alive() {
-		s.Printf("%s атакует %s и наносит %d урона. (%d❤)", e.Name(), p.FullName(), dmg, p.Health())
+		if dmgObj.IsCrit() {
+			s.Printf("%s атакует %s и наносит %d крит урона! (x%.1f) (%d❤)", e.Name(), p.FullName(), dmg, dmgObj.CritFactor(), p.Health())
+		} else {
+			s.Printf("%s атакует %s и наносит %d урона. (%d❤)", e.Name(), p.FullName(), dmg, p.Health())
+		}
 		if s.makePauseFor(ctx, time.Second) != nil {
 			return
 		}

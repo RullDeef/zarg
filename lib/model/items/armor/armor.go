@@ -9,7 +9,7 @@ import (
 type ArmorItem struct {
 	name    string
 	defence int
-	owner   I.Player
+	owner   I.Entity
 }
 
 var armorNames = []string{
@@ -46,29 +46,25 @@ func (a ArmorItem) Description() string {
 }
 
 // Pickable interface implementation
-func (a ArmorItem) Owner() I.Player {
+func (a ArmorItem) Owner() I.Entity {
 	return a.owner
 }
 
 // Pickable interface implementation
-func (a *ArmorItem) SetOwner(p I.Player) {
+func (a *ArmorItem) SetOwner(p I.Entity) {
 	a.owner = p
 }
 
 // Pickable interface implementation
-func (a *ArmorItem) ModifyOngoingDamage(dmg I.DamageStats) I.DamageStats {
-	dmg.Base -= a.defence
-	if dmg.Base < 0 {
-		dmg.Base = 0
-	}
-	dmg.Crit -= a.defence
-	if dmg.Crit < 0 {
-		dmg.Crit = 0
+func (a *ArmorItem) ModifyOngoingDamage(dmg I.Damage) I.Damage {
+	dmg.TypedDamages()[I.DamageType1] -= a.defence
+	if dmg.TypedDamages()[I.DamageType1] < 0 {
+		dmg.TypedDamages()[I.DamageType1] = 0
 	}
 	return dmg
 }
 
 // Pickable interface implementation
-func (a *ArmorItem) ModifyOutgoingDamage(dmg I.DamageStats) I.DamageStats {
+func (a *ArmorItem) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
 	return dmg
 }
