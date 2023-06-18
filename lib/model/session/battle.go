@@ -129,6 +129,9 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 			if cons.UsesLeft() > 0 {
 				opts[i] = func() {
 					cons.Consume()
+					if cons.UsesLeft() == 0 {
+						p.DropItem(cons)
+					}
 				}
 				optsInfo += fmt.Sprintf("%d) Использовать %s [x%d] (%s)\n", i, cons.Name(), cons.UsesLeft(), cons.Description())
 				i++
