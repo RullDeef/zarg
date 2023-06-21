@@ -22,6 +22,9 @@ func GenFloorMaze(name string, balancer I.FloorGenBalancer) *FloorMaze {
 	enemyRoomsCount := balancer.EnemyRoomsCount()
 	trapRoomsCount := balancer.TrapRoomsCount()
 
+	// for testing only
+	// rooms = append(rooms, genTreasureRoom(balancer))
+
 	for enemyRoomsCount > 0 || treasureRoomsCount > 0 || trapRoomsCount > 0 {
 		pm := utils.NewPropMap()
 		pm.Add("treasure", treasureRoomsCount)

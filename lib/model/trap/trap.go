@@ -103,3 +103,11 @@ func (t *TrapAttack) CritFactor() float64 {
 func (t *TrapAttack) IsCrit() bool {
 	return t.isCrit
 }
+
+func (t *TrapAttack) StatusEffectChances() map[I.StatusEffect]float64 {
+	return make(map[I.StatusEffect]float64)
+}
+
+func (t *TrapAttack) StatusEffects() []I.StatusEffect {
+	return nil
+}

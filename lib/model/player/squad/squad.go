@@ -127,8 +127,9 @@ func (pl *PlayerSquad) Info() string {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
-			inf += fmt.Sprintf("%s (%d❤ %d🗡)\n", p.FullName(), p.Health(), p.AttackStats().TypedDamages()[I.DamageType1])
-			inf += fmt.Sprintf("оружие: %s.\n", p.Weapon().Name())
+			effects := pl.EffectsCompactInfo(p)
+			inf += fmt.Sprintf("%s (%d❤ %d🗡) %s\n", p.FullName(), p.Health(), p.AttackStats().TypedDamages()[I.DamageType1], effects)
+			inf += fmt.Sprintf("оружие: %s. %s\n", p.Weapon().Name(), p.Weapon().Description())
 			var items []string
 			p.ForEachItem(func(p I.Pickable) {
 				switch p := p.(type) {
@@ -155,12 +156,25 @@ func (pl *PlayerSquad) CompactInfo() string {
 	for node := pl.list.Front(); node != nil; node = node.Next() {
 		p := node.Value.(I.Player)
 		if p.Alive() {
-			inf += fmt.Sprintf("- %s (%d❤ %d🗡)\n", p.FullName(), p.Health(), p.AttackStats().TypedDamages()[I.DamageType1])
+			effects := pl.EffectsCompactInfo(p)
+			inf += fmt.Sprintf("- %s (%d❤ %d🗡 %s)\n", p.FullName(), p.Health(), p.AttackStats().TypedDamages()[I.DamageType1], effects)
 		} else {
 			inf += fmt.Sprintf("- %s 💀\n", p.FullName())
 		}
 	}
 	return inf
+}
+
+func (pl *PlayerSquad) EffectsCompactInfo(p I.Player) string {
+	var effects []string
+	for _, eff := range p.StatusEffects() {
+		effects = append(effects, fmt.Sprintf("%sx%d", eff.Name, eff.TimeLeft))
+	}
+	if len(effects) == 0 {
+		return ""
+	} else {
+		return "[" + strings.Join(effects, "|") + "]"
+	}
 }
 
 func (pl *PlayerSquad) EndFight() {

@@ -10,6 +10,9 @@ type ArmorItem struct {
 	name    string
 	defence int
 	owner   I.Entity
+
+	// chance to produce a status effect on its owner
+	statusEffectChances map[I.StatusEffect]float64
 }
 
 var armorNames = []string{
@@ -18,11 +21,16 @@ var armorNames = []string{
 	"Маскировочный костюм",
 }
 
-func New(name string, defence int) *ArmorItem {
+func New(
+	name string,
+	defence int,
+	statusEffectChances map[I.StatusEffect]float64,
+) *ArmorItem {
 	return &ArmorItem{
-		name:    name,
-		defence: defence,
-		owner:   nil,
+		name:                name,
+		defence:             defence,
+		owner:               nil,
+		statusEffectChances: statusEffectChances,
 	}
 }
 
@@ -33,7 +41,15 @@ func Random() *ArmorItem {
 	defenceMax := 10
 	defence := defenceMin + rand.Intn(defenceMax-defenceMin+1)
 
-	return New(name, defence)
+	statusEffectChances := make(map[I.StatusEffect]float64)
+	if rand.Float64() < 0.5 {
+		statusEffectChances[I.StatusEffectAgility(1)] = 1
+	}
+	if rand.Float64() < 0.2 {
+		statusEffectChances[I.StatusEffectRegeneration(1)] = 1
+	}
+
+	return New(name, defence, statusEffectChances)
 }
 
 // Pickable interface implementation
@@ -42,7 +58,13 @@ func (a ArmorItem) Name() string {
 }
 
 func (a ArmorItem) Description() string {
-	return fmt.Sprintf("%d🛡", a.defence)
+	msg := fmt.Sprintf("%d🛡", a.defence)
+
+	for effect, chance := range a.statusEffectChances {
+		msg += fmt.Sprintf("[%dx%s:%.0f%%]", effect.TimeLeft, effect.Name, chance*100)
+	}
+
+	return msg
 }
 
 // Pickable interface implementation
@@ -61,6 +83,14 @@ func (a *ArmorItem) ModifyOngoingDamage(dmg I.Damage) I.Damage {
 	if dmg.TypedDamages()[I.DamageType1] < 0 {
 		dmg.TypedDamages()[I.DamageType1] = 0
 	}
+
+	// try luck with status effects
+	for effect, chance := range a.statusEffectChances {
+		if rand.Float64() < chance {
+			a.owner.AddStatusEffect(effect)
+		}
+	}
+
 	return dmg
 }
 

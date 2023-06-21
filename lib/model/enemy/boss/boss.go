@@ -93,3 +93,17 @@ func (b *Boss) AfterEndFight(I.Interactor, I.EntityList, I.EntityList) {
 func (b *Boss) BeforeDeath(interactor I.Interactor, friends I.EntityList, enemies I.EntityList) {
 
 }
+
+func (b *Boss) StatusEffects() []I.StatusEffect {
+	///TODO
+	return nil
+}
+
+func (b *Boss) AddStatusEffect(effect I.StatusEffect) {
+	///TODO
+}
+
+func (b *Boss) ApplyStatusEffectsBeforeMyTurn(I.Interactor, I.EntityList, I.EntityList) int {
+	///TODO
+	return 1
+}

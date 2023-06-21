@@ -6,6 +6,8 @@ type BaseDamageStats struct {
 	typedDamages map[I.DamageType]int
 	critChance   float64
 	critFactor   float64
+
+	statusEffectChances map[I.StatusEffect]float64
 }
 
 func NewStats(typedDamages map[I.DamageType]int, critChance, critFactor float64) *BaseDamageStats {
@@ -13,6 +15,22 @@ func NewStats(typedDamages map[I.DamageType]int, critChance, critFactor float64)
 		typedDamages,
 		critChance,
 		critFactor,
+
+		make(map[I.StatusEffect]float64),
+	}
+}
+
+func NewStatsWithEffects(
+	typedDamages map[I.DamageType]int,
+	critChance float64,
+	critFactor float64,
+	statusEffectChances map[I.StatusEffect]float64,
+) *BaseDamageStats {
+	return &BaseDamageStats{
+		typedDamages,
+		critChance,
+		critFactor,
+		statusEffectChances,
 	}
 }
 
@@ -29,4 +47,8 @@ func (d *BaseDamageStats) CritChance() float64 {
 // DamageStats interface implementation
 func (d *BaseDamageStats) CritFactor() float64 {
 	return d.critFactor
+}
+
+func (d *BaseDamageStats) StatusEffectChances() map[I.StatusEffect]float64 {
+	return d.statusEffectChances
 }

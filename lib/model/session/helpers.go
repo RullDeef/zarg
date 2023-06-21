@@ -18,7 +18,7 @@ func (s *Session) Printf(format string, args ...any) {
 // returns true if was canceled
 func (s *Session) receiveWithAlert(ctx context.Context, d time.Duration, f func(umsg I.UserMessage, cancel func()), alertTime time.Duration, alertMsg string) bool {
 	alarm := utils.AfterFunc(ctx, alertTime, s.pauser, func() {
-		s.Printf(alertMsg)
+		s.Printf("%s", alertMsg)
 	})
 	defer alarm.Stop()
 	return s.receiveWithTimeout(ctx, d, f)

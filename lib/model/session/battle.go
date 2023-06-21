@@ -20,7 +20,7 @@ func (s *Session) exploreEnemiesRoom(ctx context.Context, room *floormaze.EnemyR
 func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) {
 	// show battle overall info
 	battleInfo := fmt.Sprintf("Игроки:\n%sВраги:\n%s", s.players.CompactInfo(), es.CompactInfo())
-	s.Printf(battleInfo)
+	s.Printf("%s", battleInfo)
 	infoPrintedAtStart := true
 
 	// TODO: make general turn referee
@@ -53,11 +53,17 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 			}
 			infoPrintedAtStart = false
 			p := s.players.ChooseNext()
-			s.makePlayerAction(ctx, p, es)
+			turns := p.ApplyStatusEffectsBeforeMyTurn(s.interactor, s.players, es)
+			for ; turns > 0; turns-- {
+				s.makePlayerAction(ctx, p, es)
+			}
 			turnsMadePlayers += 1
 		case "enemies":
 			e := es.ChooseNext()
-			s.makeEnemyAction(ctx, e, es)
+			turns := e.ApplyStatusEffectsBeforeMyTurn(s.interactor, es, s.players)
+			for ; turns > 0; turns-- {
+				s.makeEnemyAction(ctx, e, es)
+			}
 			turnsMadeEnemies += 1
 		default:
 			s.logger.Panicf("must never happen!")
@@ -139,7 +145,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 		}
 	})
 
-	s.Printf(optsInfo)
+	s.Printf("%s", optsInfo)
 
 	canceled := s.receiveWithAlert(ctx, time.Minute, func(umsg I.UserMessage, cancel func()) {
 		opt, err := strconv.Atoi(umsg.Message())

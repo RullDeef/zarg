@@ -143,15 +143,14 @@ func (s *Session) gatherPlayers(ctx context.Context) bool {
 	if s.players.Len() == 0 {
 		s.Printf("Cбор окончен! В поход не идёт никто.")
 		return false
+	} else if s.players.Len() == 1 {
+		s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
+		return false
 	}
-	// else if s.players.Len() == 1 {
-	// 	s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
-	// 	return false
-	// }
 
 	res := "Сбор окончен! В поход собрались:\n"
 	res += s.players.ListString()
-	s.Printf(res)
+	s.Printf("%s", res)
 	return true
 }
 
@@ -168,7 +167,7 @@ func (s *Session) pickWeapons(ctx context.Context) {
 	ask += "Выберите ваше оружие среди представленных:\n"
 	ask += weaponShowcase.WeaponsInfo()
 	ask += "И поторопитесь, через 30 секунд выдвигаемся!"
-	s.Printf(ask)
+	s.Printf("%s", ask)
 
 	canceled := s.receiveWithAlert(ctx, 30*time.Second, func(umsg I.UserMessage, cancel func()) {
 		opt, err := strconv.Atoi(umsg.Message())

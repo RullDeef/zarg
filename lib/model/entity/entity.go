@@ -3,6 +3,8 @@ package entity
 import (
 	"fmt"
 	"math"
+	"math/rand"
+	"strings"
 	"zarg/lib/model/damage"
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/utils"
@@ -84,6 +86,11 @@ func (e *BaseEntity) Damage(dmg I.Damage) int {
 	// apply merged damage
 	e.ApplyPureDamage(totalDmg)
 
+	// add status effects
+	for _, effect := range dmg.StatusEffects() {
+		e.AddStatusEffect(effect)
+	}
+
 	return totalDmg
 }
 
@@ -120,7 +127,13 @@ func (e *BaseEntity) AttackStats() I.DamageStats {
 // Entity interface implementation
 func (e *BaseEntity) Attack(r float64) I.Damage {
 	stats := e.AttackStats().(*damage.BaseDamageStats)
-	var dmg I.Damage = damage.NewDamage(stats, r < stats.CritChance())
+	var statusEffects []I.StatusEffect
+	for effect, chance := range stats.StatusEffectChances() {
+		if rand.Float64() < chance {
+			statusEffects = append(statusEffects, effect)
+		}
+	}
+	var dmg I.Damage = damage.NewDamageWithEffects(stats, r < stats.CritChance(), statusEffects)
 	e.ForEachItem(func(item I.Pickable) {
 		dmg = item.ModifyOutgoingDamage(dmg)
 	})
@@ -187,5 +200,65 @@ func (e *BaseEntity) AfterEndFight(interactor I.Interactor, friends I.EntityList
 func (e *BaseEntity) BeforeDeath(interactor I.Interactor, friends I.EntityList, enemies I.EntityList) {
 	if e.BeforeDeathFunc != nil {
 		e.BeforeDeathFunc(interactor, friends, enemies)
+	}
+}
+
+// Entity interface implementation
+func (e *BaseEntity) StatusEffects() []I.StatusEffect {
+	return e.statusEffects
+}
+
+// Entity interface implementation
+func (e *BaseEntity) AddStatusEffect(effect I.StatusEffect) {
+	// try to find exsting one
+	for _, eff := range e.statusEffects {
+		if eff.Name == effect.Name {
+			if eff.TimeLeft < effect.TimeLeft {
+				eff.TimeLeft = effect.TimeLeft
+			}
+			return
+		}
+	}
+	// add new one
+	e.statusEffects = append(e.statusEffects, effect)
+}
+
+// Entity interface implementation
+func (e *BaseEntity) ApplyStatusEffectsBeforeMyTurn(interactor I.Interactor, friends I.EntityList, enemies I.EntityList) int {
+	var skipTurn = false
+	var addTurn = false
+	var msg string
+
+	var newEffects []I.StatusEffect
+	for _, effect := range e.statusEffects {
+		msg = fmt.Sprintf("%s\n%s %s (%s)", msg, e.Name(), effect.Name, effect.Description)
+		effect.TimeLeft--
+		switch effect.Name {
+		case "🌀": // оглушение (пропуск хода)
+			skipTurn = true
+		case "⚡": // проворность (доп ход)
+			addTurn = true
+		case "💞": // регенерация (+хп каждый ход)
+			e.Heal(1)
+		case "❣": // кровотечение (-хп каждый ход)
+			e.ApplyPureDamage(1)
+		}
+		if effect.TimeLeft > 0 {
+			newEffects = append(newEffects, effect)
+		}
+	}
+	e.statusEffects = newEffects
+
+	msg = strings.Trim(msg, "\n")
+	if len(msg) > 0 {
+		interactor.Printf(msg)
+	}
+
+	if addTurn && !skipTurn {
+		return 2
+	} else if skipTurn && !addTurn {
+		return 0
+	} else {
+		return 1
 	}
 }

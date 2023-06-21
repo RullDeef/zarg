@@ -21,6 +21,8 @@ type Weapon struct {
 	critFactor   float64
 	kind         WeaponKind
 	owner        I.Entity
+
+	statusEffectChances map[I.StatusEffect]float64
 }
 
 var (
@@ -51,6 +53,9 @@ func FistsWeapon() *Weapon {
 		critFactor:   2.0,
 		kind:         4,
 		owner:        nil,
+		statusEffectChances: map[I.StatusEffect]float64{
+			I.StatusEffectStun(1): 0.5,
+		},
 	}
 }
 
@@ -61,13 +66,28 @@ func RandomWeapon(attackMean, attackDiff int) *Weapon {
 	typedDamages := make(map[I.DamageType]int)
 	typedDamages[I.DamageType1] = attackMean - attackDiff + rand.Intn(2*attackDiff+1)
 
+	statusEffects := make(map[I.StatusEffect]float64)
+
+	// TODO: move constants out into status-effect-balancer kind of
+	if rand.Float64() < 0.2 {
+		time := rand.Intn(2) + 1
+		chance := float64(rand.Intn(5)+3) / 20
+		statusEffects[I.StatusEffectStun(time)] = chance
+	}
+	if rand.Float64() < 0.2 {
+		time := rand.Intn(2) + 1
+		chance := float64(rand.Intn(5)+3) / 20
+		statusEffects[I.StatusEffectBleeding(time)] = chance
+	}
+
 	return &Weapon{
-		name:         name,
-		typedDamages: typedDamages,
-		critChance:   0.1,
-		critFactor:   defaultCritFactor,
-		kind:         kind,
-		owner:        nil,
+		name:                name,
+		typedDamages:        typedDamages,
+		critChance:          0.1,
+		critFactor:          defaultCritFactor,
+		kind:                kind,
+		owner:               nil,
+		statusEffectChances: statusEffects,
 	}
 }
 
@@ -86,7 +106,13 @@ func (w *Weapon) Name() string {
 
 // Pickable interface implementation
 func (w Weapon) Description() string {
-	return fmt.Sprintf("%d🗡", w.typedDamages[I.DamageType1])
+	msg := fmt.Sprintf("%d🗡", w.typedDamages[I.DamageType1])
+
+	for effect, chance := range w.statusEffectChances {
+		msg += fmt.Sprintf("[%dx%s:%.0f%%]", effect.TimeLeft, effect.Name, chance*100)
+	}
+
+	return msg
 }
 
 // Pickable interface implementation
@@ -111,7 +137,7 @@ func (w *Weapon) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
 
 // Weapon interface implementation
 func (w Weapon) AttackStats() I.DamageStats {
-	return damage.NewStats(w.typedDamages, w.critChance, w.critFactor)
+	return damage.NewStatsWithEffects(w.typedDamages, w.critChance, w.critFactor, w.statusEffectChances)
 }
 
 // Weapon interface implementation

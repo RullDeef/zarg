@@ -1,6 +1,9 @@
 package interfaces
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type User interface {
 	ID() int
@@ -38,6 +41,13 @@ type Entity interface {
 	BeforeStartFight(interactor Interactor, friends EntityList, enemies EntityList)
 	AfterEndFight(interactor Interactor, friends EntityList, enemies EntityList)
 	BeforeDeath(Interactor Interactor, friends EntityList, enemies EntityList)
+
+	// status effects
+	StatusEffects() []StatusEffect
+	AddStatusEffect(StatusEffect)
+
+	// returns amount of turns to be proceed
+	ApplyStatusEffectsBeforeMyTurn(Interactor Interactor, friends EntityList, enemies EntityList) int
 }
 
 type EntityList interface {
@@ -61,14 +71,6 @@ type Player interface {
 	StopBlocking()
 	IsBlocking() bool
 }
-
-// type PlayerList interface {
-// 	Len() int
-// 	LenAlive() int
-
-// 	ForEach(func(Player))
-// 	ForEachAlive(func(Player))
-// }
 
 // weapon types
 const (
@@ -107,29 +109,63 @@ type DamageStats interface {
 
 	CritChance() float64
 	CritFactor() float64 // > 1
+
+	StatusEffectChances() map[StatusEffect]float64
 }
 
 type Damage interface {
 	DamageStats
 
 	IsCrit() bool
+	StatusEffects() []StatusEffect
 }
 
-type StatusEffect interface {
-	Name() string
-	Description() string
+type StatusEffect struct {
+	Name        string
+	Description string
 
-	// for now it just returns amount of turns left
-	TimeLeft() int // TODO: add custom ~ActionTime struct
-
-	BeforeAnyTurn()
-	BeforeFriendlyTurn()
-	BeforeMyTurn()
-
-	AfterMyTurn()
-	AfterFriendlyTurn()
-	AfterAnyTurn()
+	// for now it just amount of turns left
+	TimeLeft int // TODO: add custom ~ActionTime struct
 }
+
+func (s StatusEffect) ShortDescribeWithChance(chance float64) string {
+	return fmt.Sprintf("%sx%d:%.0f%%", s.Name, s.TimeLeft, chance)
+}
+
+func (s StatusEffect) DescribeWithChance(chance float64) string {
+	return fmt.Sprintf("%sx%d (%s) %.0f%%", s.Name, s.TimeLeft, s.Description, chance)
+}
+
+var (
+	StatusEffectStun = func(n int) StatusEffect {
+		return StatusEffect{
+			Name:        "🌀",
+			Description: "оглушение. Пропуск хода",
+			TimeLeft:    n,
+		}
+	}
+	StatusEffectAgility = func(n int) StatusEffect {
+		return StatusEffect{
+			Name:        "⚡",
+			Description: "проворность. Дополнительный ход",
+			TimeLeft:    n,
+		}
+	}
+	StatusEffectRegeneration = func(n int) StatusEffect {
+		return StatusEffect{
+			Name:        "💞",
+			Description: "регенерация. +1❤",
+			TimeLeft:    n,
+		}
+	}
+	StatusEffectBleeding = func(n int) StatusEffect {
+		return StatusEffect{
+			Name:        "❣",
+			Description: "кровотечение. -1❤",
+			TimeLeft:    n,
+		}
+	}
+)
 
 type Pickable interface {
 	Name() string

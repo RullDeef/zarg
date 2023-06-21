@@ -15,7 +15,7 @@ func (s *Session) exploreTrapRoom(ctx context.Context, room *floormaze.TrapRoom)
 		return
 	}
 
-	s.Printf(room.Trap.Name())
+	s.Printf("%s", room.Trap.Name())
 	if s.makePauseFor(ctx, 2*time.Second) != nil {
 		return
 	}
@@ -45,5 +45,5 @@ func (s *Session) exploreTrapRoom(ctx context.Context, room *floormaze.TrapRoom)
 		}
 	}
 
-	s.Printf(info)
+	s.Printf("%s", info)
 }

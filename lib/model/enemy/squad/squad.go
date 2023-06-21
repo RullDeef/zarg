@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"log"
+	"strings"
 	I "zarg/lib/model/interfaces"
 )
 
@@ -61,13 +62,26 @@ func (es *EnemySquad) CompactInfo() string {
 		e := node.Value.(I.Enemy)
 		if e.Alive() {
 			atk := e.AttackStats()
-			res += fmt.Sprintf("- %s (%d❤ %d🗡)\n", e.Name(), e.Health(), atk.TypedDamages()[I.DamageType1])
+			effects := es.EffectsCompactInfo(e)
+			res += fmt.Sprintf("- %s (%d❤ %d🗡) %s\n", e.Name(), e.Health(), atk.TypedDamages()[I.DamageType1], effects)
 		} else {
 			res += fmt.Sprintf("- %s 💀\n", e.Name())
 		}
 	}
 
 	return res
+}
+
+func (es *EnemySquad) EffectsCompactInfo(e I.Enemy) string {
+	var effects []string
+	for _, eff := range e.StatusEffects() {
+		effects = append(effects, fmt.Sprintf("%sx%d", eff.Name, eff.TimeLeft))
+	}
+	if len(effects) == 0 {
+		return ""
+	} else {
+		return "[" + strings.Join(effects, "|") + "]"
+	}
 }
 
 func (es *EnemySquad) LenAlive() int {

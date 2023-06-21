@@ -11,7 +11,7 @@ import (
 func (s *Session) exploreRestRoom(ctx context.Context, room *floormaze.RestRoom) {
 	info := "Вы находите комнату, в которой можно перевести дух и обговорить дальнейшие планы.\n"
 	info += "Голосуйте \"в путь\" за то, чтобы продолжить поход, и \"строй\" за то, чтобы изменить очередность."
-	s.Printf(info)
+	s.Printf("%s", info)
 
 	if s.makePauseFor(ctx, 2*time.Second) != nil {
 		return

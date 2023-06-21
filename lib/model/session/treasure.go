@@ -32,7 +32,7 @@ func (s *Session) exploreTreasureRoom(ctx context.Context, room *floormaze.Treas
 	}
 
 	inf += "Каждый может забрать не более двух предметов!"
-	s.Printf(inf)
+	s.Printf("%s", inf)
 
 	taken := make(map[int]int)
 	takenCounter := 0
