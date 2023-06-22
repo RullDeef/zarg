@@ -54,14 +54,14 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 			infoPrintedAtStart = false
 			p := s.players.ChooseNext()
 			turns := p.ApplyStatusEffectsBeforeMyTurn(s.interactor, s.players, es)
-			for ; turns > 0; turns-- {
+			for ; turns > 0 && es.LenAlive() > 0; turns-- {
 				s.makePlayerAction(ctx, p, es)
 			}
 			turnsMadePlayers += 1
 		case "enemies":
 			e := es.ChooseNext()
 			turns := e.ApplyStatusEffectsBeforeMyTurn(s.interactor, es, s.players)
-			for ; turns > 0; turns-- {
+			for ; turns > 0 && s.players.LenAlive() > 0; turns-- {
 				s.makeEnemyAction(ctx, e, es)
 			}
 			turnsMadeEnemies += 1

@@ -136,37 +136,6 @@ func (s StatusEffect) DescribeWithChance(chance float64) string {
 	return fmt.Sprintf("%sx%d (%s) %.0f%%", s.Name, s.TimeLeft, s.Description, chance)
 }
 
-var (
-	StatusEffectStun = func(n int) StatusEffect {
-		return StatusEffect{
-			Name:        "🌀",
-			Description: "оглушение. Пропуск хода",
-			TimeLeft:    n,
-		}
-	}
-	StatusEffectAgility = func(n int) StatusEffect {
-		return StatusEffect{
-			Name:        "⚡",
-			Description: "проворность. Дополнительный ход",
-			TimeLeft:    n,
-		}
-	}
-	StatusEffectRegeneration = func(n int) StatusEffect {
-		return StatusEffect{
-			Name:        "💞",
-			Description: "регенерация. +1❤",
-			TimeLeft:    n,
-		}
-	}
-	StatusEffectBleeding = func(n int) StatusEffect {
-		return StatusEffect{
-			Name:        "❣",
-			Description: "кровотечение. -1❤",
-			TimeLeft:    n,
-		}
-	}
-)
-
 type Pickable interface {
 	Name() string
 	Description() string

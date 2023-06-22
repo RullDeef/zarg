@@ -79,6 +79,21 @@ func RandomWeapon(attackMean, attackDiff int) *Weapon {
 		chance := float64(rand.Intn(5)+3) / 20
 		statusEffects[I.StatusEffectBleeding(time)] = chance
 	}
+	if rand.Float64() < 0.2 {
+		time := rand.Intn(2) + 1
+		chance := float64(rand.Intn(5)+3) / 20
+		statusEffects[I.StatusEffectBurning(time)] = chance
+	}
+	if rand.Float64() < 0.2 {
+		time := rand.Intn(2) + 1
+		chance := float64(rand.Intn(5)+3) / 20
+		statusEffects[I.StatusEffectFreezing(time)] = chance
+	}
+	if rand.Float64() < 0.2 {
+		time := rand.Intn(2) + 1
+		chance := float64(rand.Intn(5)+3) / 20
+		statusEffects[I.StatusEffectWeakness(time)] = chance
+	}
 
 	return &Weapon{
 		name:                name,

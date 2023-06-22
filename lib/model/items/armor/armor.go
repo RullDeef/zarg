@@ -43,10 +43,14 @@ func Random() *ArmorItem {
 
 	statusEffectChances := make(map[I.StatusEffect]float64)
 	if rand.Float64() < 0.5 {
-		statusEffectChances[I.StatusEffectAgility(1)] = 1
+		time := rand.Intn(2) + 2
+		chance := float64(rand.Intn(3)+1) / 20
+		statusEffectChances[I.StatusEffectAgility(time)] = chance
 	}
 	if rand.Float64() < 0.2 {
-		statusEffectChances[I.StatusEffectRegeneration(1)] = 1
+		time := rand.Intn(2) + 2
+		chance := float64(rand.Intn(3)+1) / 20
+		statusEffectChances[I.StatusEffectRegeneration(time)] = chance
 	}
 
 	return New(name, defence, statusEffectChances)

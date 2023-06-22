@@ -173,7 +173,7 @@ func (pl *PlayerSquad) EffectsCompactInfo(p I.Player) string {
 	if len(effects) == 0 {
 		return ""
 	} else {
-		return "[" + strings.Join(effects, "|") + "]"
+		return "[" + strings.Join(effects, ",") + "]"
 	}
 }
 

@@ -8,7 +8,11 @@ import (
 	"zarg/lib/model/damage"
 	I "zarg/lib/model/interfaces"
 	"zarg/lib/utils"
+
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.New()
 
 type BaseEntity struct {
 	name      string
@@ -21,6 +25,10 @@ type BaseEntity struct {
 
 	statusEffects []I.StatusEffect
 	damageStats   func() I.DamageStats
+
+	// Weakness and Strengthness account
+	forceMultiplier float64
+
 	// attack        func() I.Damage
 
 	// special actions
@@ -36,6 +44,8 @@ func New(name string, maxHealth int, damageStats func() I.DamageStats) *BaseEnti
 		maxHealth:   maxHealth,
 		damageStats: damageStats,
 		// attack:      attack,
+
+		forceMultiplier: 1.0,
 	}
 }
 
@@ -45,6 +55,8 @@ func NewBase(name string, maxHealth int, damageStats func() I.DamageStats) BaseE
 		health:      maxHealth,
 		maxHealth:   maxHealth,
 		damageStats: damageStats,
+
+		forceMultiplier: 1.0,
 	}
 }
 
@@ -127,6 +139,14 @@ func (e *BaseEntity) AttackStats() I.DamageStats {
 // Entity interface implementation
 func (e *BaseEntity) Attack(r float64) I.Damage {
 	stats := e.AttackStats().(*damage.BaseDamageStats)
+
+	// account force multiplier
+	typedDamages := make(map[I.DamageType]int)
+	for key, val := range stats.TypedDamages() {
+		typedDamages[key] = int(math.Round(float64(val) * e.forceMultiplier))
+	}
+	stats = damage.NewStatsWithEffects(typedDamages, stats.CritChance(), stats.CritFactor(), stats.StatusEffectChances())
+
 	var statusEffects []I.StatusEffect
 	for effect, chance := range stats.StatusEffectChances() {
 		if rand.Float64() < chance {
@@ -134,6 +154,7 @@ func (e *BaseEntity) Attack(r float64) I.Damage {
 		}
 	}
 	var dmg I.Damage = damage.NewDamageWithEffects(stats, r < stats.CritChance(), statusEffects)
+
 	e.ForEachItem(func(item I.Pickable) {
 		dmg = item.ModifyOutgoingDamage(dmg)
 	})
@@ -229,6 +250,8 @@ func (e *BaseEntity) ApplyStatusEffectsBeforeMyTurn(interactor I.Interactor, fri
 	var addTurn = false
 	var msg string
 
+	e.forceMultiplier = 1.0
+
 	var newEffects []I.StatusEffect
 	for _, effect := range e.statusEffects {
 		msg = fmt.Sprintf("%s\n%s %s (%s)", msg, e.Name(), effect.Name, effect.Description)
@@ -242,6 +265,16 @@ func (e *BaseEntity) ApplyStatusEffectsBeforeMyTurn(interactor I.Interactor, fri
 			e.Heal(1)
 		case "❣": // кровотечение (-хп каждый ход)
 			e.ApplyPureDamage(1)
+		case "🔥": // горение (-хп каждый ход)
+			e.ApplyPureDamage(2)
+		case "❄": // обморожение (-хп каждый ход)
+			e.ApplyPureDamage(2)
+		case "⚓": // слабость (уменьшение атаки)
+			e.forceMultiplier *= 0.8
+		case "💪": // сила (увеличение атаки)
+			e.forceMultiplier *= 1.25
+		default:
+			panic(fmt.Sprintf("unknown status effect: %s", effect.Name))
 		}
 		if effect.TimeLeft > 0 {
 			newEffects = append(newEffects, effect)
