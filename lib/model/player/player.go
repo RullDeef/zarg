@@ -7,7 +7,7 @@ import (
 
 const (
 	maxHealth      = 100
-	blockingFactor = 0.8
+	blockingFactor = 0.6
 )
 
 type Player struct {

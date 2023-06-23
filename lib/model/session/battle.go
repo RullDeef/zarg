@@ -54,14 +54,14 @@ func (s *Session) PerformBattle(ctx context.Context, es *enemySquad.EnemySquad) 
 			infoPrintedAtStart = false
 			p := s.players.ChooseNext()
 			turns := p.ApplyStatusEffectsBeforeMyTurn(s.interactor, s.players, es)
-			for ; turns > 0 && es.LenAlive() > 0; turns-- {
+			for ; p.Alive() && turns > 0 && es.LenAlive() > 0; turns-- {
 				s.makePlayerAction(ctx, p, es)
 			}
 			turnsMadePlayers += 1
 		case "enemies":
 			e := es.ChooseNext()
 			turns := e.ApplyStatusEffectsBeforeMyTurn(s.interactor, es, s.players)
-			for ; turns > 0 && s.players.LenAlive() > 0; turns-- {
+			for ; e.Alive() && turns > 0 && s.players.LenAlive() > 0; turns-- {
 				s.makeEnemyAction(ctx, e, es)
 			}
 			turnsMadeEnemies += 1
@@ -101,6 +101,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 	es.ForEachAlive(func(e I.Entity) {
 		optsInfo += fmt.Sprintf("%d) Атаковать %s (%d❤)\n", i, e.Name(), e.Health())
 		opts[i] = func() {
+			p.StopBlocking()
 			dmgObj := p.Attack(rand.Float64())
 			dmg := e.Damage(dmgObj)
 			if e.Alive() {
@@ -116,7 +117,7 @@ func (s *Session) makePlayerAction(ctx context.Context, p I.Player, es *enemySqu
 		i++
 	})
 	// add block option
-	optsInfo += fmt.Sprintf("%d) Поставить блок (x0.8🗡)\n", i)
+	optsInfo += fmt.Sprintf("%d) Поставить блок (x0.6🗡)\n", i)
 	opts[i] = func() {
 		p.BlockAttack()
 		s.Printf("%s ставит блок!", p.FullName())
@@ -168,7 +169,7 @@ func (s *Session) makeEnemyAction(ctx context.Context, e I.Enemy, es *enemySquad
 		return
 	}
 
-	p := s.players.ChooseRandomAlivePreferBlocking()
+	p := s.players.ChooseRandomAlive()
 	dmgObj := e.Attack(rand.Float64())
 	dmg := p.Damage(dmgObj)
 

@@ -46,6 +46,18 @@ func (hp *StrengthPotion) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
 	return dmg
 }
 
+func (hp *StrengthPotion) Stack(item I.Pickable) bool {
+	switch item := item.(type) {
+	case *StrengthPotion:
+		if hp.name == item.name && hp.turns == item.turns {
+			hp.usesLeft += item.usesLeft
+			return true
+		}
+	default:
+	}
+	return false
+}
+
 // Consumable interface implementation
 func (hp *StrengthPotion) Description() string {
 	return fmt.Sprintf("x1.25🗡(%d)", hp.turns)

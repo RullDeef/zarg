@@ -145,6 +145,9 @@ type Pickable interface {
 
 	ModifyOngoingDamage(Damage) Damage
 	ModifyOutgoingDamage(Damage) Damage
+
+	// tries to stack additional item, returns true on success
+	Stack(Pickable) bool
 }
 
 type Usable interface {

@@ -143,10 +143,11 @@ func (s *Session) gatherPlayers(ctx context.Context) bool {
 	if s.players.Len() == 0 {
 		s.Printf("Cбор окончен! В поход не идёт никто.")
 		return false
-	} else if s.players.Len() == 1 {
-		s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
-		return false
 	}
+	// else if s.players.Len() == 1 {
+	// 	s.Printf("Одного смельчака недостаточно, чтобы покорить данж! Поход отменён.")
+	// 	return false
+	// }
 
 	res := "Сбор окончен! В поход собрались:\n"
 	res += s.players.ListString()

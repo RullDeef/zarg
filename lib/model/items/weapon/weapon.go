@@ -40,6 +40,20 @@ var (
 		3: {"Файербол", "Молния", "Посох колдуна"},
 		4: {"Хлыст боли", "Шипастый цеп"},
 	}
+	constantEffects = map[string][]func(int) I.StatusEffect{
+		"Окровавленная Лопата": {
+			I.StatusEffectBleeding,
+		},
+		"Файербол": {
+			I.StatusEffectBurning,
+		},
+		"Хлыст боли": {
+			I.StatusEffectWeakness,
+		},
+		"Шипастый цеп": {
+			I.StatusEffectStun,
+		},
+	}
 )
 
 func FistsWeapon() *Weapon {
@@ -68,31 +82,39 @@ func RandomWeapon(attackMean, attackDiff int) *Weapon {
 
 	statusEffects := make(map[I.StatusEffect]float64)
 
-	// TODO: move constants out into status-effect-balancer kind of
-	if rand.Float64() < 0.2 {
-		time := rand.Intn(2) + 1
-		chance := float64(rand.Intn(5)+3) / 20
-		statusEffects[I.StatusEffectStun(time)] = chance
-	}
-	if rand.Float64() < 0.2 {
-		time := rand.Intn(2) + 1
-		chance := float64(rand.Intn(5)+3) / 20
-		statusEffects[I.StatusEffectBleeding(time)] = chance
-	}
-	if rand.Float64() < 0.2 {
-		time := rand.Intn(2) + 1
-		chance := float64(rand.Intn(5)+3) / 20
-		statusEffects[I.StatusEffectBurning(time)] = chance
-	}
-	if rand.Float64() < 0.2 {
-		time := rand.Intn(2) + 1
-		chance := float64(rand.Intn(5)+3) / 20
-		statusEffects[I.StatusEffectFreezing(time)] = chance
-	}
-	if rand.Float64() < 0.2 {
-		time := rand.Intn(2) + 1
-		chance := float64(rand.Intn(5)+3) / 20
-		statusEffects[I.StatusEffectWeakness(time)] = chance
+	if constantEffects[name] != nil {
+		for _, effect := range constantEffects[name] {
+			time := rand.Intn(4) + 2
+			chance := 0.20 + (0.67-0.20)/5*float64(rand.Intn(5))
+			statusEffects[effect(time)] = chance
+		}
+	} else {
+		// TODO: move constants out into status-effect-balancer kind of
+		if rand.Float64() < 0.2 {
+			time := rand.Intn(2) + 1
+			chance := float64(rand.Intn(5)+3) / 20
+			statusEffects[I.StatusEffectStun(time)] = chance
+		}
+		if rand.Float64() < 0.2 {
+			time := rand.Intn(2) + 1
+			chance := float64(rand.Intn(5)+3) / 20
+			statusEffects[I.StatusEffectBleeding(time)] = chance
+		}
+		if rand.Float64() < 0.2 {
+			time := rand.Intn(2) + 1
+			chance := float64(rand.Intn(5)+3) / 20
+			statusEffects[I.StatusEffectBurning(time)] = chance
+		}
+		if rand.Float64() < 0.2 {
+			time := rand.Intn(2) + 1
+			chance := float64(rand.Intn(5)+3) / 20
+			statusEffects[I.StatusEffectFreezing(time)] = chance
+		}
+		if rand.Float64() < 0.2 {
+			time := rand.Intn(2) + 1
+			chance := float64(rand.Intn(5)+3) / 20
+			statusEffects[I.StatusEffectWeakness(time)] = chance
+		}
 	}
 
 	return &Weapon{
@@ -148,6 +170,11 @@ func (w *Weapon) ModifyOngoingDamage(dmg I.Damage) I.Damage {
 // Pickable interface implementation
 func (w *Weapon) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
 	return dmg
+}
+
+func (w *Weapon) Stack(item I.Pickable) bool {
+	// weapon cannot be stacked
+	return false
 }
 
 // Weapon interface implementation

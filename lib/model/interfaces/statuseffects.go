@@ -18,7 +18,7 @@ var (
 	StatusEffectRegeneration = func(n int) StatusEffect {
 		return StatusEffect{
 			Name:        "💞",
-			Description: "регенерация. +1❤",
+			Description: "регенерация. +5❤",
 			TimeLeft:    n,
 		}
 	}

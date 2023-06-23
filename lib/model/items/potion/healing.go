@@ -46,6 +46,18 @@ func (hp *HealingPotion) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
 	return dmg
 }
 
+func (hp *HealingPotion) Stack(item I.Pickable) bool {
+	switch item := item.(type) {
+	case *HealingPotion:
+		if hp.name == item.name {
+			hp.usesLeft += item.usesLeft
+			return true
+		}
+	default:
+	}
+	return false
+}
+
 // Consumable interface implementation
 func (hp *HealingPotion) Description() string {
 	return fmt.Sprintf("+%d❤", hp.value)

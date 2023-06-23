@@ -7,7 +7,8 @@ import (
 type Boss struct {
 	currPhase *BossPhase
 
-	interactor I.Interactor
+	scheduledActions []func()
+	interactor       I.Interactor
 }
 
 func New(phases ...*BossPhase) *Boss {
@@ -40,7 +41,7 @@ func (b *Boss) Heal(value int) {
 
 // Entity interface implementation
 func (b *Boss) Damage(dmg I.Damage) (res int) {
-	res, b.currPhase = b.currPhase.Damage(dmg, b.interactor)
+	res, b.currPhase = b.currPhase.Damage(b, dmg, b.interactor)
 	return
 }
 
@@ -51,6 +52,12 @@ func (b *Boss) Alive() bool {
 
 // Enemy interface implementation
 func (b *Boss) Attack(r float64) I.Damage {
+	if b.scheduledActions != nil {
+		for _, act := range b.scheduledActions {
+			act()
+		}
+		b.scheduledActions = nil
+	}
 	return b.currPhase.Attack(r)
 }
 

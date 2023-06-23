@@ -102,3 +102,8 @@ func (a *ArmorItem) ModifyOngoingDamage(dmg I.Damage) I.Damage {
 func (a *ArmorItem) ModifyOutgoingDamage(dmg I.Damage) I.Damage {
 	return dmg
 }
+
+func (a *ArmorItem) Stack(item I.Pickable) bool {
+	// armor cannot be stacked
+	return false
+}

@@ -20,11 +20,14 @@ func NewPhase(name string, health int, attack func() I.DamageStats, phaseSwitch 
 	}
 }
 
-func (bf *BossPhase) Damage(dmg I.Damage, interactor I.Interactor) (int, *BossPhase) {
+func (bf *BossPhase) Damage(b *Boss, dmg I.Damage, interactor I.Interactor) (int, *BossPhase) {
 	res := bf.BaseEntity.Damage(dmg)
 
 	if !bf.Alive() && bf.nextPhase != nil {
-		bf.onPhaseSwitch(bf, bf.nextPhase, interactor)
+		capturedBf := bf
+		b.scheduledActions = append(b.scheduledActions, func() {
+			capturedBf.onPhaseSwitch(capturedBf, capturedBf.nextPhase, interactor)
+		})
 		bf = bf.nextPhase
 	}
 	return res, bf

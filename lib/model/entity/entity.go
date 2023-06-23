@@ -178,6 +178,13 @@ func (e *BaseEntity) PickItem(item I.Pickable) {
 	}
 
 	item.SetOwner(e)
+	// check if item can be stacked
+	for i := 0; i < len(e.items); i++ {
+		// combine thoose
+		if e.items[i].Stack(item) {
+			return
+		}
+	}
 	e.items = append(e.items, item)
 }
 
@@ -262,7 +269,7 @@ func (e *BaseEntity) ApplyStatusEffectsBeforeMyTurn(interactor I.Interactor, fri
 		case "⚡": // проворность (доп ход)
 			addTurn = true
 		case "💞": // регенерация (+хп каждый ход)
-			e.Heal(1)
+			e.Heal(5)
 		case "❣": // кровотечение (-хп каждый ход)
 			e.ApplyPureDamage(1)
 		case "🔥": // горение (-хп каждый ход)
