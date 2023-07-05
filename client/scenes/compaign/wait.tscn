@@ -1,0 +1,64 @@
+[gd_scene load_steps=4 format=3 uid="uid://073fo6vh6ujf"]
+
+[ext_resource type="Script" path="res://scripts/lobby/wait.gd" id="1_yxmms"]
+[ext_resource type="Script" path="res://scripts/lobby/profile_api.gd" id="2_auqda"]
+[ext_resource type="Script" path="res://scripts/lobby/new_compaign_api.gd" id="3_6lvhk"]
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_yxmms")
+
+[node name="TopLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -231.0
+offset_top = 222.0
+offset_right = 231.0
+offset_bottom = 267.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 30
+text = "Ожидание других смельчаков"
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -313.5
+offset_top = -348.0
+offset_right = 313.5
+offset_bottom = -236.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "попробовать снова"
+
+[node name="ServerAnswer" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -231.0
+offset_top = 444.0
+offset_right = 231.0
+offset_bottom = 889.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 30
+text = "waiting..."
+
+[node name="ProfileAPI" type="Node" parent="."]
+script = ExtResource("2_auqda")
+
+[node name="NewCompaignAPI" type="Node" parent="."]
+script = ExtResource("3_6lvhk")
+
+[connection signal="pressed" from="Button" to="." method="_button_clicked"]
