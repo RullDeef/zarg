@@ -18,13 +18,13 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -231.0
-offset_top = 222.0
-offset_right = 231.0
-offset_bottom = 267.0
+offset_left = -239.5
+offset_top = 413.0
+offset_right = 239.5
+offset_bottom = 458.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 30
-text = "Ожидание других смельчаков"
+text = "введите IP адрес сервера выше"
 
 [node name="Button" type="Button" parent="."]
 layout_mode = 1
@@ -48,9 +48,9 @@ anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -231.0
-offset_top = 444.0
+offset_top = 642.0
 offset_right = 231.0
-offset_bottom = 889.0
+offset_bottom = 1087.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 30
 text = "waiting..."
@@ -61,4 +61,19 @@ script = ExtResource("2_auqda")
 [node name="NewCompaignAPI" type="Node" parent="."]
 script = ExtResource("3_6lvhk")
 
+[node name="ServerAddr" type="LineEdit" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -464.0
+offset_top = 282.0
+offset_right = 464.0
+offset_bottom = 367.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 40
+placeholder_text = "192.168.0.0"
+alignment = 1
+
 [connection signal="pressed" from="Button" to="." method="_button_clicked"]
+[connection signal="text_changed" from="ServerAddr" to="." method="_on_server_addr_text_changed"]

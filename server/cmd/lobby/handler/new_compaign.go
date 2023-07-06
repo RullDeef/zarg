@@ -36,5 +36,10 @@ func BuildOnNewCompaignRequest(logger *logrus.Entry, participator *service.Parti
 			conn.Close()
 			return
 		}
+
+		conn.SetCloseHandler(func(code int, reason string) error {
+			participator.CancelRequest(conn)
+			return nil
+		})
 	}
 }

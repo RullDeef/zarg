@@ -67,6 +67,43 @@ func (service *Referee) RemovePlayer(player any) {
 	}
 }
 
+func (service *Referee) RemovePlayerIf(predicate func(player any) bool) bool {
+	service.logger.Info("RemovePlayerIf")
+
+	service.mutex.Lock()
+	defer service.mutex.Unlock()
+
+	elem := service.waitingPlayers.Front()
+	for elem != nil {
+		if predicate(elem.Value) {
+			service.waitingPlayers.Remove(elem)
+			return true
+		}
+		elem = elem.Next()
+	}
+
+	service.logger.Info("player not found by predicate")
+	return false
+}
+
+func (service *Referee) HasPlayer(predicate func(player any) bool) bool {
+	service.logger.Info("HasPlayer")
+
+	service.mutex.Lock()
+	defer service.mutex.Unlock()
+
+	elem := service.waitingPlayers.Front()
+	for elem != nil {
+		if predicate(elem.Value) {
+			return true
+		}
+		elem = elem.Next()
+	}
+
+	service.logger.Info("player not found by predicate")
+	return false
+}
+
 // Выделяет группу игроков для похода в подземелье
 //
 // Алгоритм использует обычную очередь

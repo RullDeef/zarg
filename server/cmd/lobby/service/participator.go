@@ -87,8 +87,22 @@ func (p *Participator) SubmitRequest(ws *websocket.Conn, req ParticipationReques
 	}
 	logger.WithField("partis", partis).Info("new participant")
 
-	p.referees[req.Mode].EnqueuePlayer(partis)
+	if p.playerInAnyQueue(req.ProfileID) {
+		logger.WithField("partis", partis).Error("already in some queue")
+	} else {
+		p.referees[req.Mode].EnqueuePlayer(partis)
+	}
 	return nil
+}
+
+func (p *Participator) CancelRequest(ws *websocket.Conn) {
+	p.logger.Info("CancelRequest")
+
+	for _, referee := range p.referees {
+		referee.RemovePlayerIf(func(player any) bool {
+			return player.(*participant).ws == ws
+		})
+	}
 }
 
 func (p *Participator) onTeamReady(team *list.List) {
@@ -119,6 +133,18 @@ func (p *Participator) onTeamReady(team *list.List) {
 			ws.Close()
 		}(participant.ws)
 	}
+}
+
+func (p *Participator) playerInAnyQueue(profileID string) bool {
+	for _, referee := range p.referees {
+		if referee.HasPlayer(func(player any) bool {
+			return player.(*participant).req.ProfileID == profileID
+		}) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func modeIsValid(mode ParticipationMode) bool {
