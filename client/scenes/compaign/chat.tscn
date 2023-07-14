@@ -1,0 +1,79 @@
+[gd_scene load_steps=2 format=3 uid="uid://c7f44wu84lh0b"]
+
+[ext_resource type="Script" path="res://scripts/compaign/chat_control.gd" id="1_v4tto"]
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_v4tto")
+
+[node name="MsgEntry" type="TextEdit" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = -161.0
+offset_right = -279.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 30
+placeholder_text = "Введите сообщение..."
+
+[node name="SendButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -259.0
+offset_top = -161.0
+offset_right = -29.0
+offset_bottom = -30.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 50
+text = "SEND"
+
+[node name="ChatIDLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -269.5
+offset_top = 38.0
+offset_right = 269.5
+offset_bottom = 90.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 35
+text = "chatID: ____:____:____:____:____:____"
+
+[node name="RichTextLabel" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 38.0
+offset_top = 114.0
+offset_right = -30.0
+offset_bottom = -195.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BackButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 91.0
+offset_right = 91.0
+offset_bottom = 129.0
+text = "назад"
+
+[connection signal="pressed" from="SendButton" to="." method="_on_send_button_pressed"]
+[connection signal="pressed" from="BackButton" to="." method="_on_back_button_pressed"]

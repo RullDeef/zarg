@@ -1,8 +1,7 @@
 class_name NewCompaignAPI
 extends Node
 
-var serverHost: String = "localhost"
-var _websocketUrlFormat = "ws://%s:4667/compaigns/new"
+const _websocketUrlFormat = "ws://%s:4667/compaigns/new"
 
 enum Mode { SINGLE, RANDOM, GUILD }
 
@@ -13,6 +12,7 @@ signal _response_came(PackedByteArray)
 
 class Response:
 	var compaign_id: String
+	var textchat_id: String
 	var players: Array
 
 func make_anonymous_request(mode: Mode, profileID: String) -> Response:
@@ -22,11 +22,12 @@ func make_anonymous_request(mode: Mode, profileID: String) -> Response:
 		"anonymous": true,
 		"profile_id": profileID,
 	}
-	_client.connect_to_url(_websocketUrlFormat % [serverHost])
+	_client.connect_to_url(_websocketUrlFormat % [GlobalConfig.serverHost])
 	var data = await _response_came
 	data = JSON.parse_string(data.get_string_from_utf8())
 	var response = Response.new()
 	response.compaign_id = data["compaign_id"]
+	response.textchat_id = data["textchat_id"]
 	response.players = data["players"]
 	return response
 
