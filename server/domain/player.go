@@ -1,5 +1,7 @@
 package domain
 
+import "context"
+
 // Player - структура представляющая игрока во время похода
 type Player struct {
 	Entity           // базовая игровая сущность
@@ -19,4 +21,8 @@ func NewPlayer(profile *Profile) *Player {
 
 func (p *Player) Pickup(item *PickableItem) error {
 	return p.profile.Inventory.Pickup(item, float64(p.profile.MaxWeight()))
+}
+
+func (p *Player) MakeMove(ctx context.Context) error {
+	panic("not implemented")
 }

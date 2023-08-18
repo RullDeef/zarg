@@ -1,0 +1,183 @@
+openapi: "3.0.0"
+info:
+  title: Zarg API
+  description: Zarg Server API
+  version: 1.0.0
+  contact:
+    name: Zarg repository
+    url: https://github.com/RullDeef/zarg
+paths:
+  /profiles/new:
+    post:
+      summary: Создание анонимного профиля
+      tags:
+        - Profile
+      responses:
+        200:
+          description: Анонимный профиль успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/profileInfo'
+  /profiles/{id}:
+    get:
+      summary: Получение профиля по id
+      tags:
+        - Profile
+      responses:
+        200:
+          description: ОК
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/profileInfo'
+        404:
+          description: Профиль не найден
+    put:
+      summary: Изменение профиля
+      tags:
+        - Profile
+      responses:
+        204:
+          description: ОК
+        401:
+          description: Не авторизован
+        403:
+          description: Доступ запрещен
+  /guilds/{id}:
+    get:
+      summary: Получение гильдии по id
+      tags:
+        - Guild
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: id гильдии
+          schema:
+            type: integer
+        - name: extended
+          in: query
+          required: false
+          description: Включить информацию об участниках
+            (доступно только для членов гильдии)
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: ОК
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/guildInfo'
+        401:
+          description: Не авторизован
+        403:
+          description: Доступ запрещен
+        404:
+          description: Гильдия не найдена
+    patch:
+      summary: Изменение гильдии
+      tags:
+        - Guild
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/guildInfo'
+      responses:
+        204:
+          description: ОК
+  /compaigns/new:
+    get:
+      summary: Запрос на участие в походе (WS)
+      tags:
+        - Lobby
+      description: |
+        Запроc на участие в походе. Соединение по протоколу WS.
+      responses:
+        200:
+          description: Команда успешно подобрана
+        409:
+          description: Пользователь уже в очереди либо участвует в походе.
+            Необходимо завершить прошлое соединение чтобы начать новое.
+  /compaigns/{id}:
+    get:
+      summary: Получение информации о походе по id
+      tags:
+        - Compaign
+      description: |
+        Получить информацию о запущенном походе, его участниках и состоянии.
+      responses:
+        200:
+          description: OK
+        404:
+          description: Поход не найден
+  /textchats/{id}:
+    get:
+      summary: Запрос на подключение к текстовому чату (WS)
+      tags:
+        - Chat
+      responses:
+        200:
+          description: OK
+components:
+  schemas:
+    profileInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nickname:
+          type: string
+        avatar:
+          type: string
+          example: https://www.gravatar.com/avatar/0
+        money:
+          type: integer
+          example: 300
+        strength:
+          type: integer
+        endurance:
+          type: integer
+        luck:
+          type: integer
+        observation:
+          type: integer
+        inventory:
+          $ref: '#/components/schemas/inventory'
+    inventory:
+      type: object
+    guildInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatar:
+          type: string
+          example: https://www.gravatar.com/avatar/0
+        opened:
+          type: boolean
+          example: true
+        participants_count:
+          type: integer
+          example: 6
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/profileInfo'
+    guildPatch:
+      type: object
+      properties:
+        name:
+          type: string
+          example: cool guild
+        avatar:
+          type: string
+          example: https://www.gravatar.com/avatar/0
+        opened:
+          type: boolean
+          example: true

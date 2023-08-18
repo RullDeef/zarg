@@ -3,9 +3,8 @@ package domain
 import (
 	"context"
 	"errors"
-
-	"golang.org/x/exp/rand"
-	"golang.org/x/exp/slices"
+	"math/rand"
+	"slices"
 )
 
 var (
@@ -76,11 +75,36 @@ func NewFight(left []Fightable, right []Fightable, order []Fightable) (*Fight, e
 }
 
 // NewFightRandomOrder - конструктор боя со случайным порядком ходов
-func NewFightRandomOrder(left []Fightable, right []Fightable) (*Fight, error) {
+func NewFightRandomOrder(src rand.Source, left []Fightable, right []Fightable) (*Fight, error) {
 	order := make([]Fightable, 0, len(left)+len(right))
 	order = append(order, left...)
 	order = append(order, right...)
-	rand.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
+
+	rand.New(src).Shuffle(len(order), func(i, j int) {
+		order[i], order[j] = order[j], order[i]
+	})
+
+	return NewFight(left, right, order)
+}
+
+// NewFightSemiRandomOrder - конструктор боя с сохранением относительного порядка команд
+func NewFightSemiRandomOrder(src rand.Source, left []Fightable, right []Fightable) (*Fight, error) {
+	order := make([]Fightable, 0, len(left)+len(right))
+	rand := rand.New(src)
+
+	i, j := 0, 0
+	for i < len(left) || j < len(right) {
+		if rand.Intn(2) == 0 && i < len(left) {
+			order = append(order, left[i])
+			i++
+		} else if j < len(right) {
+			order = append(order, right[j])
+			j++
+		} else {
+			order = append(order, left[i])
+			i++
+		}
+	}
 
 	return NewFight(left, right, order)
 }

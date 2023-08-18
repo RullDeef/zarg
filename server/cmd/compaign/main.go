@@ -1,31 +1,45 @@
 package main
 
-import (
-	"fmt"
-	"net/http"
-	"server/cmd/compaign/handler"
+// const defaultPort = 4668
 
-	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
-)
+// var logger *logrus.Entry
 
-const defaultPort = 4668
+// func main() {
+// 	log := logrus.New()
+// 	// log.SetReportCaller(true)
+// 	logger = log.WithField("microservice", "compaign")
 
-var logger *logrus.Entry
+// 	chatMngr := service.NewChatManager(logger)
 
-func main() {
-	log := logrus.New()
-	log.SetReportCaller(true)
-	logger = log.WithField("microservice", "compaign")
+// 	router := mux.NewRouter()
 
-	router := mux.NewRouter()
-	router.Path("/compaign/{id}").HandlerFunc(handler.GetCompaign).Methods("GET")
+// 	compaignRouter := router.PathPrefix("/compaign").Subrouter()
 
-	http.Handle("/", router)
+// 	compaignRouter.
+// 		HandleFunc("", handler.BuildCreateCompaignHandler(logger)).
+// 		Methods("POST")
+// 	compaignRouter.
+// 		HandleFunc("/{id}", handler.GetCompaign).
+// 		Methods("GET")
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", defaultPort), nil)
-	if err != nil {
-		logger.Error(err)
-		panic(err)
-	}
-}
+// 	textChatsRouter := router.PathPrefix("/textchats").Subrouter()
+// 	// creates brand new text chat
+// 	textChatsRouter.
+// 		HandleFunc("", handler.BuildTextChatCreateHandler(logger, chatMngr)).
+// 		Methods("POST")
+// 	// connects user to specific text chat
+// 	textChatsRouter.Path("/{chat_id}").
+// 		Queries("user_id", "{user_id:.*}").
+// 		HandlerFunc(handler.BuildTextChatHandler(logger, chatMngr))
+// 	// deletes text chat (DANGEROUS!!) // TODO: add confirmation token of some kind to allow only server execute request
+// 	textChatsRouter.Path("/{chat_id}").
+// 		HandlerFunc(handler.BuildTextChatDeleteHandler(logger, chatMngr)).
+// 		Methods("DELETE")
+
+// 	http.Handle("/", router)
+// 	err := http.ListenAndServe(fmt.Sprintf(":%d", defaultPort), nil)
+// 	if err != nil {
+// 		logger.Error(err)
+// 		panic(err)
+// 	}
+// }
