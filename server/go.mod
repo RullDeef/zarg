@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df

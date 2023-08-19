@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"context"
 	"errors"
 	"server/domain"
 	"time"
@@ -8,7 +9,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrParticipationModeInvalid = errors.New("invalid participation mode") // некорректный режим похода
+var (
+	ErrParticipationModeInvalid = errors.New("invalid participation mode") // некорректный режим похода
+	ErrProfileNotInQueue        = errors.New("profile not in queue")       // профиль не в очереди
+)
 
 // Lobby - структура, отвечающая за обработку запросов на участие в походах и формирование групп
 type Lobby struct {
@@ -25,7 +29,7 @@ const (
 )
 
 // New - создает новое лобби
-func New(logger *zap.SugaredLogger) *Lobby {
+func NewLobby(logger *zap.SugaredLogger) *Lobby {
 	return &Lobby{
 		logger: logger,
 		requestQueues: map[ParticipationMode]*requestQueue{
@@ -79,4 +83,28 @@ func (l *Lobby) CancelRequest(profile *domain.Profile) {
 	for _, queue := range l.requestQueues {
 		queue.CancelRequest(profile)
 	}
+}
+
+func (l *Lobby) CancelRequestByID(profileID domain.ProfileID) {
+	l.logger.Infow("CancelRequestByID", "profileID", profileID)
+
+	for _, queue := range l.requestQueues {
+		queue.CancelRequestByID(profileID)
+	}
+}
+
+// WaitJoin - ожидает формирования команды (блокирующий вызов).
+// Если пользователь не находится ни в одной очереди - сразу возвращает ошибку.
+func (l *Lobby) WaitJoin(ctx context.Context, profileID domain.ProfileID) (domain.CompaignID, error) {
+	l.logger.Infow("WaitJoin", "profileID", profileID)
+
+	for _, queue := range l.requestQueues {
+		compaignID, err := queue.WaitJoin(ctx, profileID)
+		if err == ErrProfileNotInQueue {
+			continue
+		}
+		return compaignID, err
+	}
+
+	return "", ErrProfileNotInQueue
 }

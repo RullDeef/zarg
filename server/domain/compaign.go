@@ -10,6 +10,7 @@ var ErrCompaignCannotBeReused = errors.New("compaign cannot be reused") // по�
 
 // Compaign - структура представляющая активный поход
 type Compaign struct {
+	ID            CompaignID
 	Participators []*Player     // участники похода с учетом строя
 	StartTime     time.Time     // время начала похода
 	Duration      time.Duration // длительность похода (0, если он еще не завершен)
@@ -17,6 +18,8 @@ type Compaign struct {
 	// wayChooser - функция выбора направления (при перемещении)
 	wayChooser func(context.Context, []DungeonWay) (DungeonWay, error)
 }
+
+type CompaignID string
 
 type WayChooserFunc func(context.Context, []DungeonWay) (DungeonWay, error)
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"server/internal/modules/auth"
 	"server/internal/modules/lobby"
 	"server/internal/modules/logger"
 	"server/internal/modules/server"
@@ -15,6 +16,7 @@ func main() {
 	app := fx.New(
 		logger.Module,
 		lobby.Module,
+		auth.Module,
 		server.Module,
 		fx.Invoke(func(s *server.Server) {
 			s.Run(fmt.Sprintf(":%d", defaultPort))

@@ -9,11 +9,12 @@ import (
 )
 
 var Module = fx.Module("lobby",
-	fx.Provide(NewLobby),
+	fx.Provide(NewLobbyManaged),
+	fx.Provide(NewController),
 )
 
-func NewLobby(lc fx.Lifecycle, logger *zap.SugaredLogger) *Lobby {
-	lobby := New(logger)
+func NewLobbyManaged(lc fx.Lifecycle, logger *zap.SugaredLogger) *Lobby {
+	lobby := NewLobby(logger)
 
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
