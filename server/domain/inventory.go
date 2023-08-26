@@ -55,6 +55,16 @@ func (inv *Inventory) Cost() int {
 	return cost
 }
 
+// HasItem - проверяет, есть ли данный предмет в инвентаре (по ссылке)
+func (inv *Inventory) HasItem(item *PickableItem) bool {
+	for _, i := range inv.Items {
+		if i == item {
+			return true
+		}
+	}
+	return false
+}
+
 // Pickup - подбирает предмет, если он удовлетворяет всем ограничениям
 func (inv *Inventory) Pickup(item *PickableItem) error {
 	if err := inv.checkConstraints(item); err != nil {
