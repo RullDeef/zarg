@@ -57,3 +57,8 @@ func (c *Compaign) VisitDungeon(ctx context.Context, d Dungeon) error {
 	c.Duration = time.Since(c.StartTime)
 	return nil
 }
+
+// TrivialWayChooser - функция безусловного выбора первого направления из возможных
+func TrivialWayChooser(_ context.Context, ways []DungeonWay) (DungeonWay, error) {
+	return ways[0], nil
+}

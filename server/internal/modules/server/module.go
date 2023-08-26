@@ -5,5 +5,9 @@ import (
 )
 
 var Module = fx.Module("server",
-	fx.Provide(New),
+	fx.Provide(
+		newLobbyMux,
+		newProfileMux,
+		NewServer,
+	),
 )

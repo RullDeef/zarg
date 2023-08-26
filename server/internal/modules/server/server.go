@@ -1,36 +1,28 @@
 package server
 
 import (
-	"context"
 	"net/http"
-	"server/internal/modules/lobby"
 
-	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 type Server struct {
-	logger     *zap.SugaredLogger
-	mux        *http.ServeMux
-	controller *lobby.Controller
+	logger *zap.SugaredLogger
+	mux    *http.ServeMux
 }
 
-func New(logger *zap.SugaredLogger, controller *lobby.Controller) *Server {
+func NewServer(logger *zap.SugaredLogger, pm *profileMux, lm *lobbyMux) *Server {
 	s := Server{
-		logger:     logger,
-		mux:        http.NewServeMux(),
-		controller: controller,
+		logger: logger,
+		mux:    http.NewServeMux(),
 	}
 
 	// /api/lobby/join?mode=[single|guild|random]
-	s.mux.Handle("/api/lobby/join",
-		panicWrapperMiddleware(
-			loggerMiddleware(
-				s.logger,
-				http.HandlerFunc(s.apiLobbyJoin),
-			),
-		),
-	)
+	s.mux.Handle("/api/lobby/", http.StripPrefix("/api/lobby", lm))
+
+	// /api/profiles/new
+	// /api/profiles/[id]
+	s.mux.Handle("/api/profiles/", http.StripPrefix("/api/profiles", pm))
 
 	return &s
 }
@@ -39,37 +31,4 @@ func (s *Server) Run(address string) error {
 	s.logger.Infow("Run", "address", address)
 
 	return http.ListenAndServe(address, s.mux)
-}
-
-func (s *Server) apiLobbyJoin(w http.ResponseWriter, r *http.Request) {
-	mode := r.FormValue("mode")
-	authToken := r.Header.Get("Authorization")
-	profileID, err := s.controller.AcceptJoinRequest(mode, authToken)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	mw := wsUpgradeMiddleware(func(conn *websocket.Conn) {
-		conn.SetCloseHandler(func(code int, text string) error {
-			s.controller.CancelRequest(profileID)
-			return nil
-		})
-
-		conn.WriteJSON(map[string]string{
-			"profile_id": string(profileID),
-			"status":     "waiting",
-		})
-
-		compaignID, err := s.controller.WaitJoin(context.Background(), profileID)
-		if err != nil {
-			conn.WriteJSON(map[string]string{"error": err.Error()})
-		} else {
-			conn.WriteJSON(map[string]string{"compaign_id": string(compaignID)})
-		}
-
-		conn.Close()
-	})
-
-	go mw.ServeHTTP(w, r)
 }

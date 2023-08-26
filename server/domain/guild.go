@@ -12,63 +12,40 @@ var (
 	ErrEmptyProfiles         = errors.New("empty profiles")
 	ErrProfileAlreadyInGuild = errors.New("profile already in guild")
 	ErrProfileNotInGuild     = errors.New("profile not in guild")
-
-	// ErrRequestInProgress означает, что запрос на присоединение уже отправлен
-	ErrRequestInProgress = errors.New("request in progress")
-
-	ErrJoinRequestNotFound = errors.New("join request not found")
+	ErrRequestInProgress     = errors.New("request in progress") // запрос на присоединение уже отправлен
+	ErrJoinRequestNotFound   = errors.New("join request not found")
 )
 
 type GuildID string
 
 type Guild struct {
-	ID   GuildID `json:"id"`
-	Name string  `json:"name"`
+	ID            GuildID             `json:"id"`
+	Name          string              `json:"name"`
+	Leader        *Profile            `json:"leader"`        // глава гильдии
+	Participators []GuildParticipator `json:"participators"` // участники гильдии
+	JoinRequests  []GuildJoinRequest  `json:"join_requests"` // запросы на присоединение
 
-	// Leader - глава гильдии
-	Leader *Profile `json:"leader"`
-
-	// Participators - участники гильдии
-	Participators []GuildParticipator `json:"participators"`
-
-	// JoinRequests - запросы на присоединение
-	JoinRequests []GuildJoinRequest `json:"join_requests"`
-
-	// Activity - история походов, совершенных участниками гильдии.
-	Activity []*GuildActivity `json:"activity"`
+	Activity []*GuildActivity `json:"activity"` // история походов, совершенных участниками гильдии
 }
 
 type GuildParticipator struct {
-	Profile *Profile `json:"profile"`
-
-	// JoinDate - время, когда данный участник присоединился к гильдии
-	JoinDate time.Time `json:"join_date"`
+	Profile  *Profile  `json:"profile"`
+	JoinDate time.Time `json:"join_date"` // время, когда данный участник присоединился к гильдии
 }
 
+// GuildJoinRequest - запрос на вступление в гильдию
 type GuildJoinRequest struct {
-	// Profile - от кого поступил запрос
-	Profile *Profile
-
-	// JoinRequestDate - время, когда был отправлен запрос
-	JoinRequestDate time.Time
-
-	// Message - опциональное сообщение отправляемое вместе с запросом
-	Message string
+	Profile         *Profile  // от кого поступил запрос
+	JoinRequestDate time.Time // время, когда был отправлен запрос
+	Message         string    // опциональное сообщение отправляемое вместе с запросом
 }
 
 // GuildActivity - отслеживаемая активность участников гильдии
 type GuildActivity struct {
-	// AcitivityType - тип активности (для отображения пользователям)
-	AcitivityType string
-
-	// Participators - участники активности
-	Participators []*Profile
-
-	// StartTime - время начала активности
-	StartTime time.Time
-
-	// Duration - длительность активности
-	Duration time.Duration
+	AcitivityType string        // тип активности (для отображения пользователям)
+	Participators []*Profile    // участники активности
+	StartTime     time.Time     // время начала активности
+	Duration      time.Duration // длительность активности
 }
 
 // NewGuildFromProfiles - создает новую гильдию. Главой гильдии назначается

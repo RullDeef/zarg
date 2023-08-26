@@ -18,7 +18,12 @@ type Entity struct {
 	onAfterHit       func() // срабатывает после получения несмертельного урона
 	onAfterHeal      func() // срабатывает после восстановлении здоровья
 
-	onMove func() error // ход существа, после срабатывания всех эффектов
+	controller EntityController // контроллер сущности. Определяет действия во время хода
+}
+
+// EntityController - объект, управляющий сущностью
+type EntityController interface {
+	MakeMove(context.Context, *Entity) error // ход существа, после срабатывания всех эффектов
 }
 
 // NewEntity - создает новую сущность в качестве базы для игрока, врага или союзника
@@ -37,7 +42,7 @@ func NewEntityBase(name string, health int, inventory *Inventory, effectGroup *E
 		onAfterHit:       func() {},
 		onAfterHeal:      func() {},
 
-		onMove: func() error { return nil },
+		controller: noopController{},
 	}
 }
 
@@ -71,11 +76,27 @@ func (e *Entity) Heal(heal int) {
 	e.onAfterHeal()
 }
 
-// MakeMove - реализация Fightable по-умолчанию (применяет эффекты и вызывает e.onMove)
-func (e *Entity) MakeMove(context.Context) error {
+// MakeMove - реализация Fightable по-умолчанию
+// (применяет эффекты и вызывает MakeMove контроллера)
+func (e *Entity) MakeMove(ctx context.Context) error {
 	err := e.ActivateEffects()
 	if err != nil {
 		return err
 	}
-	return e.onMove()
+	return e.controller.MakeMove(ctx, e)
+}
+
+// SetController - задает новый контроллер для сущности
+func (e *Entity) SetController(controller EntityController) {
+	if controller == nil {
+		panic("controller is nil")
+	}
+	e.controller = controller
+}
+
+// noopController - контроллер существа, который ничего не делает
+type noopController struct{}
+
+func (noopController) MakeMove(context.Context, *Entity) error {
+	return nil
 }

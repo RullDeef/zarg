@@ -3,9 +3,8 @@ package domain
 import "errors"
 
 var (
-	ErrOverweight         = errors.New("overweight")          // перегруз
-	ErrConstraintMismatch = errors.New("constraint mismatch") // невозможно взять предмет из-за ограничений
-	ErrItemNotFound       = errors.New("item not found")      // предмет не найден в инвентаре
+	ErrOverweight   = errors.New("overweight")     // перегруз
+	ErrItemNotFound = errors.New("item not found") // предмет не найден в инвентаре
 )
 
 type Inventory struct {
@@ -16,14 +15,19 @@ type Inventory struct {
 	constraints []InventoryConstraint
 }
 
+// InventoryConstraint - ограничение на подбираемые предметы.
+// error должен описывать причину несоответствия условию.
+//
+// Типичный пример ограничения - ограничение по весу предметов. Новый предмет
+// не может быть подобран, если суммарный вес инвентаря превзойдет некоторое значение
 type InventoryConstraint interface {
-	CanHoldWith(items []*PickableItem, newItem *PickableItem) bool
+	CanHoldIn(inv *Inventory, newItem *PickableItem) error
 }
 
-type InventoryConstraintFunc func(items []*PickableItem, newItem *PickableItem) bool
+type InventoryConstraintFunc func(inv *Inventory, newItem *PickableItem) error
 
-func (f InventoryConstraintFunc) CanHoldWith(items []*PickableItem, newItem *PickableItem) bool {
-	return f(items, newItem)
+func (f InventoryConstraintFunc) CanHoldIn(inv *Inventory, newItem *PickableItem) error {
+	return f(inv, newItem)
 }
 
 func NewEmptyInventory(constraints ...InventoryConstraint) *Inventory {
@@ -51,27 +55,23 @@ func (inv *Inventory) Cost() int {
 	return cost
 }
 
-// Pickup - подбирает предмет, если для него хватает веса в инвентаре
-func (inv *Inventory) Pickup(item *PickableItem, maxWeight float64) error {
-	if inv.Weight()+item.Weight > maxWeight {
-		return ErrOverweight
-	}
-
-	if !inv.checkConstraints(item) {
-		return ErrConstraintMismatch
+// Pickup - подбирает предмет, если он удовлетворяет всем ограничениям
+func (inv *Inventory) Pickup(item *PickableItem) error {
+	if err := inv.checkConstraints(item); err != nil {
+		return err
 	}
 
 	inv.Items = append(inv.Items, item)
 	return nil
 }
 
-func (inv *Inventory) checkConstraints(item *PickableItem) bool {
+func (inv *Inventory) checkConstraints(item *PickableItem) error {
 	for _, constraint := range inv.constraints {
-		if !constraint.CanHoldWith(inv.Items, item) {
-			return false
+		if err := constraint.CanHoldIn(inv, item); err != nil {
+			return err
 		}
 	}
-	return true
+	return nil
 }
 
 // Drop - удаляет предмет из инвентаря.
@@ -84,4 +84,14 @@ func (inv *Inventory) Drop(item *PickableItem) error {
 		}
 	}
 	return ErrItemNotFound
+}
+
+// NewMaxWeightConstraint - ограничение по максимальному весу
+func NewMaxWeightConstraint(maxWeight func() float64) InventoryConstraint {
+	return InventoryConstraintFunc(func(inv *Inventory, newItem *PickableItem) error {
+		if maxWeight() < inv.Weight()+newItem.Weight {
+			return ErrOverweight
+		}
+		return nil
+	})
 }
