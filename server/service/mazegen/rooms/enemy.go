@@ -6,31 +6,26 @@ import (
 	"server/domain"
 )
 
+// EnemyRoom - комната с врагами. При входе запускается бой
 type EnemyRoom struct {
-	enemies []*domain.Entity
+	enemies []*domain.Entity // список врагов в комнате
 
-	randSource rand.Source
+	randSource rand.Source // источник для генератора псевдослучайных чисел
 }
 
 var _ domain.Room = &EnemyRoom{}
 
+// NewEnemyRoom - создает новую комнату с врагами
 func NewEnemyRoom(enemies []*domain.Entity, randSource rand.Source) *EnemyRoom {
 	return &EnemyRoom{
-		enemies: enemies,
+		enemies:    enemies,
+		randSource: randSource,
 	}
 }
 
+// Visit - запускает бой с врагами в комнате
 func (e *EnemyRoom) Visit(ctx context.Context, c *domain.Compaign) error {
-	players := make([]domain.Fightable, len(c.Participators))
-	for i, p := range c.Participators {
-		players[i] = p
-	}
-	enemies := make([]domain.Fightable, len(e.enemies))
-	for i, e := range e.enemies {
-		enemies[i] = e
-	}
-
-	fight, err := domain.NewFightRandomOrder(e.randSource, players, enemies)
+	fight, err := domain.NewFightRandomOrder(e.randSource, c.Participators, e.enemies)
 	if err == nil {
 		err = fight.PerformFight(ctx)
 	}

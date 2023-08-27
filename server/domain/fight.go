@@ -45,7 +45,7 @@ type Fightable interface {
 }
 
 // NewFight - конструктор боя
-func NewFight[T Fightable](left []T, right []T, order []T) (*Fight, error) {
+func NewFight[T, U, V Fightable](left []T, right []U, order []V) (*Fight, error) {
 	all := make([]Fightable, 0, len(left)+len(right))
 	for _, e := range left {
 		all = append(all, e)
@@ -94,10 +94,14 @@ func NewFight[T Fightable](left []T, right []T, order []T) (*Fight, error) {
 }
 
 // NewFightRandomOrder - конструктор боя со случайным порядком ходов
-func NewFightRandomOrder(src rand.Source, left []Fightable, right []Fightable) (*Fight, error) {
+func NewFightRandomOrder[T, U Fightable](src rand.Source, left []T, right []U) (*Fight, error) {
 	order := make([]Fightable, 0, len(left)+len(right))
-	order = append(order, left...)
-	order = append(order, right...)
+	for _, e := range left {
+		order = append(order, e)
+	}
+	for _, e := range right {
+		order = append(order, e)
+	}
 
 	rand.New(src).Shuffle(len(order), func(i, j int) {
 		order[i], order[j] = order[j], order[i]
