@@ -5,14 +5,32 @@ import (
 	"server/domain"
 )
 
+// TreasureRoom - комната с сокровищами
 type TreasureRoom struct {
 	items             []*domain.PickableItem
 	distributor       domain.Distributor
 	maxItemsPerPlayer int
 }
 
-// NewTreasureRoom - создает новую комнату с сокровищами
-func NewTreasureRoom(
+type TreasureRoomGenerator struct {
+	itemsPool map[poolType][]itemDescriptor // пулы дескрипторов предметов
+}
+
+// poolType тип пула предметов
+type poolType int
+
+const (
+	PoolTreasureRoom poolType = iota // в комнате сокровищ
+	PoolEnemyDrop                    // дроп с врага
+)
+
+// itemDescriptor - дескриптор предмета
+type itemDescriptor struct {
+	rarity map[poolType]float64 // редкость - вероятность обнаружить данный предмет в данном пуле
+}
+
+// newTreasureRoom - создает новую комнату с сокровищами
+func newTreasureRoom(
 	items []*domain.PickableItem,
 	distributor domain.Distributor,
 	maxItemsPerPlayer int,

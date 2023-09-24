@@ -4,9 +4,10 @@ import "context"
 
 // PickableItem - структура, представляющая один подбираемый предмет
 type PickableItem struct {
-	Title       string  // краткое название предмета
-	Description string  // полное описание предмета
-	Weight      float64 // вес предмета
+	Title       string   // краткое название предмета
+	Description string   // полное описание предмета
+	Kind        ItemKind // тип предмета (оружие, броня, зелье и тп)
+	Weight      float64  // вес предмета
 
 	// Cost - стоимость при продаже.
 	// Если продажа невозможна, то стоимость равна 0
@@ -24,6 +25,7 @@ type PickableItem struct {
 	UseCases []*ItemUseCase
 }
 
+// ItemUseCase - способ использования предмета
 type ItemUseCase struct {
 	Title            string // краткое описание варианта использования
 	Description      string // подробное описание варианта использования
@@ -38,3 +40,25 @@ type ItemUseCase struct {
 
 	Action func(context.Context, *PickableItem) error // само действие
 }
+
+// ItemKind - тип предмета
+type ItemKind int
+
+const (
+	ItemKindWeaponMelee           = iota // оружие / ближний бой
+	ItemKindWeaponRanged                 // оружие / дальний бой
+	ItemKindWeaponMagic                  // оружие / магическое
+	ItemKindWeaponThrowable              // оружие / метательное
+	ItemKindArmorCuirass                 // броня / кираса
+	ItemKindArmorTassets                 // броня / налядвенники
+	ItemKindArmorHelmet                  // броня / шлем
+	ItemKindArmorGloves                  // броня / перчатки
+	ItemKindArmorBoots                   // броня / ботинки
+	ItemKindPotionHealing                // зелье / восстанавливающее
+	ItemKindPotionEffect                 // зелье / накладывающее эффекты
+	ItemKindPotionBoost                  // зелье / повышающее характеристики
+	ItemKindSpecialCarpenterTool         // особое / инструмент плотника
+	ItemKindSpecialJewel                 // особое / драгоценные камни
+	ItemKindSpecialEnchantedStone        // особое / зачарованные камни
+	ItemKindCharm                        // амулет
+)
