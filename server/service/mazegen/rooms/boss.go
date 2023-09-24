@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"context"
+	"log"
 	"math/rand"
 	"server/domain"
 )
@@ -27,4 +28,21 @@ func (br *BossRoom) Visit(ctx context.Context, c *domain.Compaign) error {
 		err = fight.PerformFight(ctx)
 	}
 	return err
+}
+
+type BossRoomGenerator struct {
+	logger *log.Logger
+}
+
+func NewBossRoomGenerator() *BossRoomGenerator {
+	// TODO: implement
+	return &BossRoomGenerator{
+		logger: log.New(log.Writer(), "boss-room", 0),
+	}
+}
+
+func (brg *BossRoomGenerator) Generate(randSource rand.Source) (domain.Room, error) {
+	// TODO: implement
+	brg.logger.Println("boss room generated")
+	return NewBossRoom(nil, randSource), nil
 }

@@ -20,6 +20,8 @@ type PickableItem struct {
 	KeepOnDeath       bool // остается ли предмет после смерти
 	KeepAfterCompaign bool // остается ли предмет после прохождения похода
 
+	Rarity float64 // вероятность найти данный предмет в сокровищнице (от 0 до 1)
+
 	// UseCases - список вариантов использования предмета во время боя.
 	// Если предмет не может быть использован, список пуст
 	UseCases []*ItemUseCase
@@ -62,3 +64,34 @@ const (
 	ItemKindSpecialEnchantedStone        // особое / зачарованные камни
 	ItemKindCharm                        // амулет
 )
+
+// IsWeapon - является ли предмет оружием
+func (k ItemKind) IsWeapon() bool {
+	return k == ItemKindWeaponMelee ||
+		k == ItemKindWeaponRanged ||
+		k == ItemKindWeaponMagic ||
+		k == ItemKindWeaponThrowable
+}
+
+// IsArmor - является ли предмет броней
+func (k ItemKind) IsArmor() bool {
+	return k == ItemKindArmorCuirass ||
+		k == ItemKindArmorTassets ||
+		k == ItemKindArmorHelmet ||
+		k == ItemKindArmorGloves ||
+		k == ItemKindArmorBoots
+}
+
+// IsPotion - является ли предмет зельем
+func (k ItemKind) IsPotion() bool {
+	return k == ItemKindPotionHealing ||
+		k == ItemKindPotionEffect ||
+		k == ItemKindPotionBoost
+}
+
+// IsSpecial - является ли предмет особым
+func (k ItemKind) IsSpecial() bool {
+	return k == ItemKindSpecialCarpenterTool ||
+		k == ItemKindSpecialJewel ||
+		k == ItemKindSpecialEnchantedStone
+}

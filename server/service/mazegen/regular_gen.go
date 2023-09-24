@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"server/domain"
+	"server/service/mazegen/rooms"
 )
 
 // Константы, используемые при генерации подземелья
@@ -23,6 +24,15 @@ const (
 )
 
 var (
+	// ErrParticipantsCountZero - количество человек в походе равно нулю
+	ErrParticipantsCountZero = errors.New("participants count must not be zero")
+
+	// ErrInvalidGuildScoreAvg - оценка очков прогресса гильдии некорректна
+	ErrInvalidGuildScoreAvg = errors.New("invalid guild score avg")
+
+	// ErrInvalidDungeonsCompletedAvg - некорректное среднее количество пройденных подземелий
+	ErrInvalidDungeonsCompletedAvg = errors.New("invalid dungeons completed avg")
+
 	// ErrTooFewRoomsOnFloor - слишком мало комнат на этаже
 	ErrTooFewRoomsOnFloor = errors.New("too few rooms on floor")
 
@@ -46,16 +56,61 @@ type RegularDungeonGenerator struct {
 	// Данный параметр влияет на помещение НИПа в подземелье
 	FromOneGuild bool
 
-	treasureRoomGen RoomGenFunc // генератор комнат сокровищ
-	trapRoomGen     RoomGenFunc // генератор комнат с ловушками
-	enemyRoomGen    RoomGenFunc // генератор комнат с врагами
-	restRoomGen     RoomGenFunc // генератор комнат отдыха
-	bossRoomGen     RoomGenFunc // генератор комнат с боссом
-	npcRoomGen      RoomGenFunc // генератор комнаты с НИПом
+	treasureRoomGen RoomGen // генератор комнат сокровищ
+	trapRoomGen     RoomGen // генератор комнат с ловушками
+	enemyRoomGen    RoomGen // генератор комнат с врагами
+	restRoomGen     RoomGen // генератор комнат отдыха
+	bossRoomGen     RoomGen // генератор комнат с боссом
+	npcRoomGen      RoomGen // генератор комнаты с НИПом
 }
 
-// RoomGenFunc - функция генерации комнаты определенного типа
-type RoomGenFunc func(rand.Source) (domain.Room, error)
+// RoomGen - интерфейс генератора комнат
+type RoomGen interface {
+	Generate(src rand.Source) (domain.Room, error)
+}
+
+// NewRegularGenerator - создает стандартный генератор стандартного подземелья
+func NewRegularGenerator(
+	participantsCount uint,
+	guildScoreAvg float64,
+	dungeonsCompletedAvg float64,
+	fromOneGuild bool,
+	// treasure room generator params
+	itemsPool []*domain.PickableItem,
+	distributor domain.Distributor,
+	maxItemsPerPlayer int,
+) (*RegularDungeonGenerator, error) {
+	if participantsCount == 0 {
+		return nil, ErrParticipantsCountZero
+	}
+
+	if guildScoreAvg < 0 {
+		return nil, ErrInvalidGuildScoreAvg
+	}
+
+	if dungeonsCompletedAvg < 0 {
+		return nil, ErrInvalidDungeonsCompletedAvg
+	}
+
+	return &RegularDungeonGenerator{
+		ParticipantsCount:    participantsCount,
+		GuildScoreAvg:        guildScoreAvg,
+		DungeonsCompletedAvg: dungeonsCompletedAvg,
+		FromOneGuild:         fromOneGuild,
+
+		treasureRoomGen: rooms.NewTreasureRoomGenerator(
+			itemsPool,
+			distributor,
+			participantsCount,
+			maxItemsPerPlayer,
+		),
+		trapRoomGen:  rooms.NewTrapRoomGenerator(),
+		enemyRoomGen: rooms.NewEnemyRoomGenerator(),
+		restRoomGen:  rooms.NewRestRoomGenerator(),
+		bossRoomGen:  rooms.NewBossRoomGenerator(),
+		npcRoomGen:   rooms.NewNPCRoomGenerator(),
+	}, nil
+}
 
 func (g *RegularDungeonGenerator) Generate(src rand.Source) (domain.Dungeon, error) {
 	floors := make([][]domain.Room, g.floorsCount())
@@ -112,14 +167,14 @@ func (g *RegularDungeonGenerator) generateFloor(src rand.Source, floor int) ([]d
 	rooms := make([]domain.Room, roomsCount)
 
 	// последняя комната - комната с боссом
-	if room, err := g.bossRoomGen(src); err != nil {
+	if room, err := g.bossRoomGen.Generate(src); err != nil {
 		return nil, err
 	} else {
 		rooms[roomsCount-1] = room
 	}
 
 	// предпоследняя комната - комната отдыха
-	if room, err := g.restRoomGen(src); err != nil {
+	if room, err := g.restRoomGen.Generate(src); err != nil {
 		return nil, err
 	} else {
 		rooms[roomsCount-2] = room
@@ -128,7 +183,7 @@ func (g *RegularDungeonGenerator) generateFloor(src rand.Source, floor int) ([]d
 	// случайно поместить сокровищницу
 	if i, err := pickRandNil(src, rooms); err != nil {
 		return nil, err
-	} else if room, err := g.treasureRoomGen(src); err != nil {
+	} else if room, err := g.treasureRoomGen.Generate(src); err != nil {
 		return nil, err
 	} else {
 		rooms[i] = room
@@ -137,7 +192,7 @@ func (g *RegularDungeonGenerator) generateFloor(src rand.Source, floor int) ([]d
 	// случайно поместить комнату с ловушками
 	if i, err := pickRandNil(src, rooms); err != nil {
 		return nil, err
-	} else if room, err := g.trapRoomGen(src); err != nil {
+	} else if room, err := g.trapRoomGen.Generate(src); err != nil {
 		return nil, err
 	} else {
 		rooms[i] = room
@@ -165,13 +220,13 @@ func (g *RegularDungeonGenerator) generateFloor(src rand.Source, floor int) ([]d
 		var room domain.Room
 		switch rType {
 		case 0: // сокровищница
-			room, err = g.treasureRoomGen(src)
+			room, err = g.treasureRoomGen.Generate(src)
 			Rtreasure++
 		case 1: // комната с ловушками
-			room, err = g.trapRoomGen(src)
+			room, err = g.trapRoomGen.Generate(src)
 			Rtrap++
 		case 2: // комната с монстрами
-			room, err = g.enemyRoomGen(src)
+			room, err = g.enemyRoomGen.Generate(src)
 			Renemy++
 		default:
 			panic("must never happen")
@@ -197,7 +252,7 @@ func (g *RegularDungeonGenerator) placeNPC(src rand.Source, floors [][]domain.Ro
 	// Предполагается, что данные комнаты будут последними на любом этаже
 	roomIndex := rand.New(src).Intn(len(floors[floorIndex]) - 2)
 
-	if room, err := g.npcRoomGen(src); err != nil {
+	if room, err := g.npcRoomGen.Generate(src); err != nil {
 		return nil, err
 	} else {
 		floors[floorIndex][roomIndex] = room

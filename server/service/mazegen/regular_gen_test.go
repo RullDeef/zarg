@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type RoomGenFunc func(rand.Source) (domain.Room, error)
+
+func (rf RoomGenFunc) Generate(src rand.Source) (domain.Room, error) {
+	return rf(src)
+}
+
 // TestRegularGenerator_Newby - проверяет подземелье для новичков
 func TestRegularGenerator_Newby(t *testing.T) {
 	const testingSeed = 7431118648
@@ -204,10 +210,10 @@ func mockBaseGenerator() *RegularDungeonGenerator {
 	}
 }
 
-func mockRoomGen(roomName string) RoomGenFunc {
-	return func(s rand.Source) (domain.Room, error) {
+func mockRoomGen(roomName string) RoomGen {
+	return RoomGenFunc(func(s rand.Source) (domain.Room, error) {
 		return &MockRoom{Name: roomName}, nil
-	}
+	})
 }
 
 type MockRoom struct {

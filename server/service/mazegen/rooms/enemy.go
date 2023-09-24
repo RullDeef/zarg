@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"context"
+	"log"
 	"math/rand"
 	"server/domain"
 )
@@ -30,4 +31,21 @@ func (e *EnemyRoom) Visit(ctx context.Context, c *domain.Compaign) error {
 		err = fight.PerformFight(ctx)
 	}
 	return err
+}
+
+type EnemyRoomGenerator struct {
+	log *log.Logger
+}
+
+func NewEnemyRoomGenerator() *EnemyRoomGenerator {
+	// TODO: implement
+	return &EnemyRoomGenerator{
+		log: log.New(log.Writer(), "enemy-room", 0),
+	}
+}
+
+// Generate - генерирует комнату с врагами
+func (e *EnemyRoomGenerator) Generate(src rand.Source) (domain.Room, error) {
+	// TODO: implement
+	return NewEnemyRoom(make([]*domain.Entity, 0), src), nil
 }
