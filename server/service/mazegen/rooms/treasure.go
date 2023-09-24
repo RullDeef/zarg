@@ -120,7 +120,7 @@ func (g *TreasureRoomGenerator) Generate(src rand.Source) (domain.Room, error) {
 	// но имеет меньшую редкость, то он может заменить предметы с большей редкостью (меньшим rarity).
 	for i := 0; i < maxItems; i++ {
 		perm := rnd.Perm(len(g.itemsPool))
-		item := g.itemsPool[perm[0]]
+		item := g.itemsPool[perm[0]].Clone()
 		needReplace := false
 
 		if item.Kind.IsWeapon() {

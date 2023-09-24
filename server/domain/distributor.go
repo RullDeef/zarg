@@ -7,6 +7,8 @@ import (
 )
 
 var (
+	ErrNoParticipants = errors.New("no participants") // нет участников
+	ErrNoItems        = errors.New("no items")        // нет предметов
 	ErrTimeoutExpired = errors.New("timeout expired") // время распределения вышло
 )
 

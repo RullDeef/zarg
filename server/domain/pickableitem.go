@@ -95,3 +95,40 @@ func (k ItemKind) IsSpecial() bool {
 		k == ItemKindSpecialJewel ||
 		k == ItemKindSpecialEnchantedStone
 }
+
+// Clone - полностью дублирует предмет. Полезно для
+// инстанцирования предметов при генерации лута или сокровищ.
+func (pi *PickableItem) Clone() *PickableItem {
+	return &PickableItem{
+		Title:             pi.Title,
+		Description:       pi.Description,
+		Kind:              pi.Kind,
+		Weight:            pi.Weight,
+		Cost:              pi.Cost,
+		IsStoryline:       pi.IsStoryline,
+		IsWeapon:          pi.IsWeapon,
+		IsEquipable:       pi.IsEquipable,
+		KeepOnEscape:      pi.KeepOnEscape,
+		KeepOnDeath:       pi.KeepOnDeath,
+		KeepAfterCompaign: pi.KeepAfterCompaign,
+		Rarity:            pi.Rarity,
+		UseCases:          cloneUseCases(pi.UseCases),
+	}
+}
+
+func cloneUseCases(useCases []*ItemUseCase) []*ItemUseCase {
+	new := make([]*ItemUseCase, len(useCases))
+	for i, uc := range useCases {
+		new[i] = &ItemUseCase{
+			Title:            uc.Title,
+			Description:      uc.Description,
+			CanBeUsedOnRest:  uc.CanBeUsedOnRest,
+			CanBeUsedInFight: uc.CanBeUsedInFight,
+			UseSpendsMove:    uc.UseSpendsMove,
+			IsDestructive:    uc.IsDestructive,
+			UsesLeft:         uc.UsesLeft,
+			Action:           uc.Action,
+		}
+	}
+	return new
+}

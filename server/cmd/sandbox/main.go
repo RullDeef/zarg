@@ -9,9 +9,9 @@ import (
 	"math/rand"
 	"server/domain"
 	"server/internal/modules/logger"
+	"server/service/distributor"
 	"server/service/mazegen"
-
-	"go.uber.org/zap"
+	"time"
 )
 
 func main() {
@@ -21,6 +21,7 @@ func main() {
 // Тестирование обычного похода в подземелье
 func testRegularDungeon() {
 	log := logger.New()
+	src := rand.NewSource(7431118648)
 
 	players := []*domain.Profile{
 		newTestProfile("Mike"),
@@ -54,14 +55,32 @@ func testRegularDungeon() {
 				Rarity:            0.6,
 			},
 		}, // items pool
-		newTestDistributor(log), // distributor
-		2,                       // max items per player
+		distributor.NewRegular(func(
+			ctx context.Context,
+			player *domain.Player,
+			items <-chan []*domain.PickableItem,
+			wantPickup, wantDrop chan<- *domain.PickableItem,
+		) error {
+			rnd := rand.New(src)
+			for freeItems := range items {
+				if len(freeItems) == 0 {
+					break
+				}
+
+				// random delay && try pick random item
+				time.Sleep(time.Duration(rnd.Intn(200)) * time.Millisecond)
+				item := freeItems[rnd.Intn(len(freeItems))]
+				wantPickup <- item
+			}
+			return ctx.Err()
+		}), // distributor
+		2, // max items per player
 	)
 	if err != nil {
 		log.Sugar().Fatalw("failed to create dungeon generator", "error", err)
 	}
 
-	dungeon, err := generator.Generate(rand.NewSource(7431118648))
+	dungeon, err := generator.Generate(src)
 	if err != nil {
 		log.Sugar().Fatalw("failed to generate dungeon", "error", err)
 	}
@@ -80,46 +99,4 @@ func newTestProfile(name string) *domain.Profile {
 	profile := domain.NewAnonymousProfile()
 	profile.Nickname = name
 	return profile
-}
-
-type testDistributor struct {
-	logger *zap.Logger
-}
-
-var _ domain.Distributor = &testDistributor{}
-
-func (d *testDistributor) Distribute(
-	ctx context.Context,
-	players []*domain.Player,
-	items []*domain.PickableItem,
-	config domain.DistributionConfig,
-) (domain.PlayerItemDistribution, error) {
-	d.logger.Sugar().Infoln("distributor: items:")
-	for i, item := range items {
-		d.logger.Sugar().Infof("%d) %s", i, item.Title)
-	}
-	d.logger.Sugar().Infoln("players:")
-	for i, player := range players {
-		d.logger.Sugar().Infof("%d) %s", i, player.Name)
-	}
-	d.logger.Sugar().Infoln("distributing evenly...")
-	distr := make(domain.PlayerItemDistribution, len(players))
-	j := 0
-	for _, item := range items {
-		player := players[j]
-		d.logger.Sugar().Infof("give %s to %s", item.Title, player.Name)
-		distr[player] = append(distr[player], item)
-		j++
-		if j >= len(players) {
-			j = 0
-		}
-	}
-
-	return distr, nil
-}
-
-func newTestDistributor(logger *zap.Logger) domain.Distributor {
-	return &testDistributor{
-		logger: logger,
-	}
 }
