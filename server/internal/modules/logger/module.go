@@ -1,13 +1,10 @@
 package logger
 
-import (
-	"go.uber.org/fx"
-	"go.uber.org/zap"
-)
+import "go.uber.org/fx"
 
 var Module = fx.Module("logger",
-	fx.Provide(New),
-	fx.Provide(func(logger *zap.Logger) *zap.SugaredLogger {
-		return logger.Sugar()
-	}),
+	fx.Provide(
+		New,
+		Sugarize,
+	),
 )

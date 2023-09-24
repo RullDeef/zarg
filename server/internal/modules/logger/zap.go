@@ -1,8 +1,6 @@
 package logger
 
-import (
-	"go.uber.org/zap"
-)
+import "go.uber.org/zap"
 
 func New() *zap.Logger {
 	logger, err := zap.NewDevelopment()
@@ -10,4 +8,8 @@ func New() *zap.Logger {
 		panic(err)
 	}
 	return logger
+}
+
+func Sugarize(logger *zap.Logger) *zap.SugaredLogger {
+	return logger.Sugar()
 }
