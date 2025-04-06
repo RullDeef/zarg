@@ -1,0 +1,18 @@
+- id: 1
+  title: Rusted sword
+  description: Very old rusty sword
+  kind: weapon/melee
+  weight: 6
+  cost: 15
+  isWeapon: true
+  rarity: 0.9
+  useCases:
+    - title: attack
+      description: swing a sword and make a damage
+      canBeUsedInFight: true
+      useSpendsMove: true
+      usesLeft: -1
+      action:
+        id: attack/melee
+        baseDamage: 4
+        damageType: physical

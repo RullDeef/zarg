@@ -18,7 +18,7 @@ type PickableItem struct {
 	IsEquipable       bool // можно ли надеть предмет (броня, аксессуары, амулеты)
 	KeepOnEscape      bool // остается ли предмет в инвентаре при побеге
 	KeepOnDeath       bool // остается ли предмет после смерти
-	KeepAfterCompaign bool // остается ли предмет после прохождения похода
+	DropAfterCompaign bool // теряется ли предмет после прохождения похода
 
 	Rarity float64 // вероятность найти данный предмет в сокровищнице (от 0 до 1)
 
@@ -110,7 +110,7 @@ func (pi *PickableItem) Clone() *PickableItem {
 		IsEquipable:       pi.IsEquipable,
 		KeepOnEscape:      pi.KeepOnEscape,
 		KeepOnDeath:       pi.KeepOnDeath,
-		KeepAfterCompaign: pi.KeepAfterCompaign,
+		DropAfterCompaign: pi.DropAfterCompaign,
 		Rarity:            pi.Rarity,
 		UseCases:          cloneUseCases(pi.UseCases),
 	}
